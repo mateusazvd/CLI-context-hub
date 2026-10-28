@@ -24,14 +24,15 @@ function loadWithMocks (file, mocks, globals = {}) {
     console, process, ...globals
   }
 
-  function usageForTest () {
-    return loadWithMocks(path.resolve(__dirname, '../src/main/usage.js'), {
-      'node-pty': {},
-      '@xterm/headless': {}
-    })
-  }
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), context, { filename: file })
   return context.module.exports
+}
+
+function usageForTest () {
+  return loadWithMocks(path.resolve(__dirname, '../src/main/usage.js'), {
+    'node-pty': {},
+    '@xterm/headless': {}
+  })
 }
 
 test('argumentos preservam Claude/Copilot, Gemini e iniciam Codex com start e no-daemon', () => {

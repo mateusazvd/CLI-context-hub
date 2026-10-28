@@ -1,0 +1,23 @@
+{
+  "name": "cli-context-hub",
+  "version": "0.1.0",
+  "description": "Desktop workspace for managing large amounts of information concisely, built around AI CLIs.",
+  "private": true,
+  "license": "MIT",
+  "author": "Mateus Azevedo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mateusazvd/CLI-context-hub.git"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "start": "npm --prefix app start",
+    "test": "npm --prefix app test"
+  },
+  "devDependencies": {
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2"
+  }
+}
