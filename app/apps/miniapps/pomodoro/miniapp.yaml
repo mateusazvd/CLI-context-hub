@@ -1,0 +1,10 @@
+name: pomodoro
+title: Pomodoro Timer
+version: 1.0.0
+description: Timer Pomodoro com modos foco (25min) e pausa (5min).
+runtime: electron-web
+entry: index.html
+dataScope: isolated
+integration: none
+permissions: []
+capabilities: []

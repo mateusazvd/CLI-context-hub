@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: file:; worker-src 'self' blob: https://cdnjs.cloudflare.com; connect-src 'self' data: blob: file:" />
+    <title>harness-hub</title>
+    <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css" />
+    <link rel="stylesheet" href="./draw/dist/draw.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- TITLEBAR CUSTOMIZADA -->
+    <header id="titlebar">
+      <div class="tb-drag">
+        <span class="tb-title">harness-hub</span>
+      </div>
+      <div class="tb-controls">
+        <button id="tb-min" class="tb-btn" title="Minimizar">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="5.5" width="10" height="1" fill="currentColor"/></svg>
+        </button>
+        <button id="tb-max" class="tb-btn" title="Maximizar">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+        </button>
+        <button id="tb-close" class="tb-btn tb-close" title="Fechar">
+          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="app">
+      <!-- MENU -->
+      <aside id="sidebar">
+        <div class="side-head">
+          <button id="btn-toggle" class="icon-btn" title="Recolher/expandir menu">☰</button>
+          <span class="brand">harness-hub</span>
+          <button id="btn-new-harness" class="icon-btn" title="Criar novo harness">＋</button>
+          <button id="btn-pin" class="icon-btn pin" title="Fixar menu aberto">📌</button>
+        </div>
+
+        <div class="side-section-title">Harness</div>
+        <nav id="harness-list"></nav>
+
+        <section id="usage" class="usage" aria-label="Uso dos modelos">
+          <div class="usage-head">
+            <span class="side-section-title">Uso</span>
+            <span id="usage-time" class="usage-time"></span>
+            <button id="btn-usage-refresh" class="icon-btn small" title="Atualizar agora">⟳</button>
+          </div>
+          <div id="usage-body"></div>
+        </section>
+
+        <div class="side-bottom">
+          <button id="btn-settings" class="h-item settings-btn" title="Configurações">
+            <span class="h-avatar gear">⚙</span>
+            <span class="h-text"><span class="h-title">Configurações</span></span>
+          </button>
+          <div class="side-foot" id="harness-root" title=""></div>
+        </div>
+      </aside>
+
+      <!-- ÁREA PRINCIPAL -->
+      <main id="main">
+        <!-- barra de ferramentas -->
+        <div id="toolbar">
+          <button id="tb-miniapps" class="tb-btn" title="Abrir catálogo de miniapps">
+            <span class="tb-icon">▦</span>
+            <span class="tb-label">Miniapps</span>
+            <span id="miniapp-count" class="tb-count"></span>
+          </button>
+          <button id="tb-browser" class="tb-btn" title="Navegador">
+            <span class="tb-icon">⊕</span>
+            <span class="tb-label">Navegador</span>
+          </button>
+          <span class="tabbar-spacer"></span>
+          <button id="tb-theme" class="tb-btn" title="Alternar tema claro/escuro">
+            <span class="tb-icon" id="tb-theme-icon">☀</span>
+          </button>
+          <button id="tb-fullscreen" class="tb-btn" title="Tela cheia (F11)">
+            <span class="tb-icon" id="tb-fs-icon">⛶</span>
+          </button>
+        </div>
+
+
+        <div id="tabbar" class="hidden">
+          <div id="tabs"></div>
+          <button id="btn-new-tab" class="icon-btn" title="Nova aba">＋</button>
+          <span class="tabbar-spacer"></span>
+          <button id="btn-explorer" class="icon-btn" title="Mostrar/ocultar arquivos">🗂</button>
+        </div>
+
+        <div id="workspace">
+        <div id="stage">
+          <!-- estado vazio -->
+          <section id="view-empty" class="view">
+            <div class="empty">
+              <div class="empty-icon">⌘</div>
+              <h2>Selecione um harness</h2>
+              <p>Escolha um harness no menu para iniciar uma sessão ou retomar uma anterior.</p>
+            </div>
+          </section>
+
+          <!-- launcher: nova sessão + sessões anteriores -->
+          <section id="view-launcher" class="view hidden">
+            <div class="launcher">
+              <header class="launcher-head">
+                <h1 id="launcher-title"></h1>
+                <p id="launcher-desc"></p>
+                <p id="launcher-warn" class="warn hidden"></p>
+                <div class="workdir-default-row">
+                  <label class="workdir-label">Diretorio padrão:</label>
+                  <input id="harness-workdir" type="text" placeholder="Pasta do harness (raiz)" readonly />
+                  <button id="btn-browse-harness-workdir" class="icon-btn" title="Alterar pasta padrão">📁</button>
+                  <button id="btn-clear-harness-workdir" class="icon-btn" title="Usar pasta do harness (raiz)">✕</button>
+                </div>
+              </header>
+
+              <div class="block">
+                <h3>Nova sessão</h3>
+                <input id="new-title" type="text" placeholder="Nome da sessão (ex: login com JWT)" maxlength="80" />
+                <div class="workdir-row">
+                  <input id="new-workdir" type="text" placeholder="Pasta do projeto (padrão: pasta do harness)" />
+                  <button id="btn-browse-workdir" class="icon-btn" title="Procurar pasta">📁</button>
+                </div>
+                <div class="engines" id="new-engines"></div>
+              </div>
+
+              <div class="block">
+                <h3>Sessões anteriores</h3>
+                <div id="session-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- configurações -->
+          <section id="view-settings" class="view hidden">
+            <div class="launcher">
+              <header class="launcher-head">
+                <h1>Configurações</h1>
+                <p>Arquivo: <code id="settings-file"></code></p>
+              </header>
+
+              <div class="block">
+                <h3>CLIs ativos</h3>
+                <p class="hint">Ative os CLIs que deseja usar. Desativar encerra seus terminais abertos após confirmação; o histórico é preservado. Instale cada CLI separadamente no computador.</p>
+                <div id="settings-enabled-engines" class="engine-toggles"></div>
+              </div>
+              <div class="block">
+                <h3>Motor padrão</h3>
+                <p class="hint">Usado ao iniciar sessões nos harnesses que não definem um motor próprio no <code>harness.yaml</code>.</p>
+                <div class="engines" id="settings-engines" role="radiogroup" aria-label="Motor padrão"></div>
+                <p class="hint" id="settings-overrides"></p>
+              </div>
+              <div class="block">
+                <h3>Painel de uso</h3>
+                <p class="hint">Escolha quais CLIs aparecem no painel de uso do menu. Os desmarcados não são consultados.</p>
+                <div id="settings-usage-engines" class="engine-toggles"></div>
+              </div>
+
+              <div class="save-bar">
+                <span id="settings-status" class="hint"></span>
+                <button id="btn-settings-discard" class="btn ghost" disabled>Descartar</button>
+                <button id="btn-settings-save" class="btn primary" disabled>Salvar</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- terminais (um container por aba) -->
+          <section id="view-terms" class="view hidden"></section>
+        </div>
+
+        <!-- explorador: pasta files/ do harness da aba ativa -->
+        <aside id="explorer" class="hidden" aria-label="Arquivos do harness">
+          <div id="explorer-resize" title="Arraste para redimensionar"></div>
+          <div class="ex-head">
+            <span class="ex-title">Arquivos</span>
+            <button id="ex-new-file" class="icon-btn small" title="Novo arquivo">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4.5M9 1.5 12.5 5v3.5M9 1.5V5h3.5"/><path d="M12 10.5v4M10 12.5h4"/></svg>
+            </button>
+            <button id="ex-new-folder" class="icon-btn small" title="Nova pasta">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M8.5 13.5h-6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3.5l1.5 1.5h6a1 1 0 0 1 1 1V8.5"/><path d="M12.5 10v4.5M10.25 12.25h4.5"/></svg>
+            </button>
+            <button id="ex-new-drawing" class="icon-btn small" title="Novo desenho (Excalidraw)">✏</button>
+            <button id="ex-collapse" class="icon-btn small" title="Recolher pastas">⊟</button>
+            <button id="ex-refresh" class="icon-btn small" title="Recarregar">⟳</button>
+            <button id="ex-close" class="icon-btn small" title="Ocultar">✕</button>
+          </div>
+          <button id="ex-root" class="ex-root" title="Abrir pasta no Explorer"></button>
+          <div id="ex-tree" role="tree"></div>
+          <!-- estrutura 3D das pastas do harness -->
+          <section id="graph3d-panel" class="graph3d-panel" aria-label="Estrutura 3D do harness">
+            <div class="graph3d-head">
+              <span class="graph3d-title">Estrutura</span>
+              <button id="graph3d-reload" class="icon-btn small" title="Recarregar estrutura">⟳</button>
+              <button id="graph3d-toggle-all" class="icon-btn small" title="Recolher tudo">⊟</button>
+              <button id="graph3d-topics-btn" class="icon-btn small" title="Filtrar por tópico">◉</button>
+              <button id="graph3d-center" class="icon-btn small" title="Centralizar estrutura">⊙</button>
+              <button id="graph3d-expand" class="icon-btn small" title="Expandir">⤢</button>
+            </div>
+            <div id="graph3d-topics" class="graph3d-topics hidden"></div>
+            <div id="graph3d-container" class="graph3d-container"></div>
+          </section>
+        </aside>
+        </div>
+      </main>
+
+    </div>
+
+ <div id="modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-box">
+        <h2 id="modal-title"></h2>
+        <div id="modal-body"></div>
+        <div class="modal-actions">
+          <button id="modal-cancel" class="btn ghost">Cancelar</button>
+          <button id="modal-confirm" class="btn danger"></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="miniapps-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="miniapps-modal-title">
+      <div class="miniapps-modal-box">
+        <header class="miniapps-modal-head">
+          <div>
+            <h2 id="miniapps-modal-title">Miniapps</h2>
+            <p>Escolha uma ferramenta para abrir.</p>
+          </div>
+          <button id="miniapps-modal-close" class="icon-btn" title="Fechar">×</button>
+        </header>
+        <input id="miniapps-search" class="modal-input" type="search" placeholder="Buscar miniapps..." autocomplete="off" />
+        <div id="miniapps-grid" class="miniapps-grid"></div>
+      </div>
+    </div>
+
+
+
+    <div id="ctx-menu" class="hidden" role="menu"></div>
+
+    <div id="toast" class="hidden"><span id="toast-msg"></span><button id="toast-close" title="Fechar">×</button></div>
+
+    <script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+    <script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+    <script src="../../node_modules/three/build/three.min.js"></script>
+    <script type="module" src="./draw/dist/draw.js"></script>
+    <script type="module" src="./draw/dist/md.js"></script>
+    <script type="module" src="./draw/dist/svg.js"></script>
+    <script type="module" src="./draw/dist/html.js"></script>
+    <link rel="stylesheet" href="../../node_modules/katex/dist/katex.min.css">
+    <script src="../../node_modules/katex/dist/katex.min.js"></script>
+    <script type="module" src="./draw/dist/mathnote.js"></script>
+    <script type="module" src="./draw/dist/pdf.js"></script>
+    <script src="./draw/dist/json.js"></script>
+    <script src="./harness-graph.js"></script>
+    <script src="./graph3d.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

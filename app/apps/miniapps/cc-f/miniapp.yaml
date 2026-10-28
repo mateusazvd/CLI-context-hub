@@ -1,0 +1,11 @@
+name: cc-f
+title: Painel de Estudos
+version: 2.0.0
+description: Painel de estudos com cronograma, pesquisas da faculdade e pesquisas gerais.
+runtime: electron-web
+entry: index.html
+dataScope: global
+integration: none
+permissions: []
+capabilities:
+  - persistent-storage

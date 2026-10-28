@@ -1,0 +1,11 @@
+name: todo-list
+title: To-do list
+version: 0.1.0
+description: Lista global de tarefas independentes, agrupadas por dia.
+runtime: electron-web
+entry: index.html
+dataScope: global
+integration: none
+permissions: []
+capabilities:
+  - persistent-storage

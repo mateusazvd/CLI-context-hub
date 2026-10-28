@@ -1,0 +1,11 @@
+name: notes
+title: Notes
+version: 1.0.0
+description: Editor de texto em blocos no estilo do Notion, com páginas, subpáginas, menu / e atalhos Markdown.
+runtime: electron-web
+entry: index.html
+dataScope: isolated
+integration: none
+permissions: []
+capabilities:
+  - persistent-storage

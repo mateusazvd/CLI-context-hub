@@ -1,0 +1,26 @@
+# Configurações do harness-hub
+# Edite pela tela de Configurações do app (⚙) ou direto neste arquivo.
+
+# CLIs ativos e padrão global (alteráveis nas Configurações)
+engine:
+  default: claude
+  enabled:
+    - claude
+    - copilot
+    - gemini
+    - codex
+    - ollama
+
+# Terminal integrado
+# shell: null = CMD no Windows. Ex: C:/Program Files/Git/bin/bash.exe
+terminal:
+  shell: null
+
+# Mini-dashboard de uso (roda /usage dos CLIs num terminal invisível)
+usage:
+  enabled: true
+  intervalMinutes: 5
+  hidden:
+    - gemini
+    - codex
+    - ollama

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Notes</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="side-head">
+          <span class="side-title">Páginas</span>
+          <button id="new-root" class="icon-btn" title="Nova página">+</button>
+        </div>
+        <input id="search" type="search" placeholder="Buscar páginas..." autocomplete="off">
+        <nav id="tree" aria-label="Páginas"></nav>
+        <button id="new-root-bottom" class="side-new">+ Nova página</button>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <nav id="crumbs" aria-label="Caminho da página"></nav>
+          <span id="status" class="status"></span>
+        </header>
+        <div id="content" class="content">
+          <article class="page">
+            <button id="page-icon" class="page-icon" title="Trocar ícone"></button>
+            <div id="title" class="title" contenteditable="true" spellcheck="true" data-placeholder="Sem título"></div>
+            <div id="blocks" class="blocks"></div>
+            <div id="tail" class="tail" title="Clique para escrever"></div>
+          </article>
+        </div>
+      </main>
+    </div>
+
+    <div id="menu" class="menu hidden" role="listbox"></div>
+    <div id="emoji" class="emoji hidden"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

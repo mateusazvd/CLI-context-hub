@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>To-do list</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">HarnessHub · Miniapp</p>
+          <h1>To-do list</h1>
+        </div>
+        <button id="new-item" class="primary">Nova tarefa</button>
+      </header>
+
+      <nav class="tab-bar">
+        <button class="tab active" data-tab="tasks">Tarefas</button>
+        <button class="tab" data-tab="research">Para pesquisar</button>
+      </nav>
+
+      <!-- ===== ABA TAREFAS ===== -->
+      <div id="panel-tasks" class="panel">
+        <section class="toolbar toolbar-tasks" aria-label="Filtros">
+          <input id="search" type="search" placeholder="Buscar tarefas...">
+          <select id="status-filter">
+            <option value="all">Todos os status</option>
+            <option value="open">Pendentes</option>
+            <option value="done">Concluídas</option>
+          </select>
+          <select id="priority-filter">
+            <option value="all">Todas as prioridades</option>
+            <option value="high">Alta</option>
+            <option value="medium">Média</option>
+            <option value="low">Baixa</option>
+          </select>
+          <select id="tag-filter">
+            <option value="all">Todas as etiquetas</option>
+          </select>
+        </section>
+        <section id="task-groups" aria-live="polite"></section>
+        <p id="empty-tasks" class="empty hidden">Nenhuma tarefa encontrada.</p>
+      </div>
+
+      <!-- ===== ABA PESQUISAR ===== -->
+      <div id="panel-research" class="panel hidden">
+        <section class="toolbar toolbar-research" aria-label="Filtros de pesquisa">
+          <input id="research-search" type="search" placeholder="Buscar assuntos...">
+          <select id="research-status-filter">
+            <option value="all">Todos</option>
+            <option value="pending">Pendentes</option>
+            <option value="done">Pesquisados</option>
+          </select>
+          <select id="research-tag-filter">
+            <option value="all">Todas as etiquetas</option>
+          </select>
+        </section>
+        <section id="research-list" aria-live="polite"></section>
+        <p id="empty-research" class="empty hidden">Nenhum assunto registrado.</p>
+      </div>
+    </main>
+
+    <dialog id="task-dialog">
+      <form id="task-form" method="dialog">
+        <h2 id="dialog-title">Nova tarefa</h2>
+        <input id="task-id" type="hidden">
+        <label>Tarefa <input id="task-title" required maxlength="160"></label>
+        <label>Detalhes <textarea id="task-notes" maxlength="1000"></textarea></label>
+        <div class="form-grid">
+          <label>Prioridade
+            <select id="task-priority">
+              <option value="low">Baixa</option>
+              <option value="medium" selected>Média</option>
+              <option value="high">Alta</option>
+            </select>
+          </label>
+          <label>Prazo <input id="task-due" type="date"></label>
+        </div>
+        <label>Etiquetas <input id="task-tags" placeholder="trabalho, pessoal"></label>
+        <label>Recorrência
+          <select id="task-repeat">
+            <option value="none">Não repetir</option>
+            <option value="daily">Diária</option>
+            <option value="weekly">Semanal</option>
+            <option value="monthly">Mensal</option>
+          </select>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" id="cancel-task" class="secondary">Cancelar</button>
+          <button type="submit" class="primary">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="research-dialog">
+      <form id="research-form" method="dialog">
+        <h2 id="research-dialog-title">Novo assunto</h2>
+        <input id="research-id" type="hidden">
+        <label>Assunto <input id="research-topic" required maxlength="200" placeholder="Ex.: Como funciona WebSocket"></label>
+        <label>Contexto / motivação <textarea id="research-notes" maxlength="1000" placeholder="Por que preciso pesquisar isso?"></textarea></label>
+        <label>Etiquetas <input id="research-tags" placeholder="faculdade, trabalho"></label>
+        <div class="dialog-actions">
+          <button type="button" id="cancel-research" class="secondary">Cancelar</button>
+          <button type="submit" class="primary">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+    <script src="app.js"></script>
+  </body>
+</html>

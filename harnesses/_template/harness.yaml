@@ -1,0 +1,34 @@
+# Identidade do harness
+name: nome-do-harness            # kebab-case, igual ao nome da pasta
+title: Nome Amigável
+description: Uma frase sobre para que este harness serve.
+version: 0.1.0
+
+# Motores (CLIs) suportados
+engines:
+  default: null                  # null = usa engine.default do settings.yaml
+  supported: null                # null = todos os CLIs cadastrados; ativação nas Configurações
+
+# Pasta onde o terminal abre.
+# null = raiz deste harness (os CLIs leem AGENTS.md e as skills; arquivos vão para files/).
+# Para um projeto real use o caminho absoluto, ex: C:/dev/meu-projeto
+workdir: null
+
+# Variáveis de ambiente injetadas no terminal (opcional, nunca coloque segredos aqui)
+env: {}
+
+# Opções específicas de cada CLI (opcional)
+claude:
+  model: null                    # ex: opus, sonnet (null = padrão do CLI)
+  args: []                       # argumentos extras ao iniciar o `claude`
+copilot:
+  model: null
+  args: []                       # argumentos extras ao iniciar o `copilot`
+gemini:
+  model: null
+  args: []                       # argumentos extras ao iniciar o `gemini`
+codex:
+  model: null
+  args: []                       # argumentos extras ao iniciar o `codex`
+ollama:
+  args: []                       # vazio = menu do `ollama`; ex.: [run, qwen3.5:9b] abre direto esse modelo

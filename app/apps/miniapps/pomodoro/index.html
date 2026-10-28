@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Pomodoro Timer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+    .container { background: #1e293b; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; width: 320px; }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #38bdf8; }
+    .modes { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .mode-btn { background: #334155; border: none; color: #cbd5e1; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+    .mode-btn.active { background: #0284c7; color: #fff; font-weight: bold; }
+    .timer { font-size: 3.5rem; font-weight: bold; margin-bottom: 1.5rem; letter-spacing: 2px; }
+    .controls { display: flex; justify-content: center; gap: 1rem; }
+    .btn { background: #0284c7; border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+    .btn:hover { background: #0369a1; }
+    .btn-secondary { background: #475569; }
+    .btn-secondary:hover { background: #334155; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pomodoro Timer</h1>
+    <div class="modes">
+      <button class="mode-btn active" id="btn-work" onclick="setMode('work', 25)">Foco (25m)</button>
+      <button class="mode-btn" id="btn-break" onclick="setMode('break', 5)">Pausa (5m)</button>
+    </div>
+    <div class="timer" id="timer-display">25:00</div>
+    <div class="controls">
+      <button class="btn" id="btn-start" onclick="toggleTimer()">Iniciar</button>
+      <button class="btn btn-secondary" onclick="resetTimer()">Zerar</button>
+    </div>
+  </div>
+
+  <script>
+    let totalSeconds = 25 * 60;
+    let timerInterval = null;
+    let isRunning = false;
+    let currentMode = 'work';
+
+    const display = document.getElementById('timer-display');
+    const startBtn = document.getElementById('btn-start');
+    const workBtn = document.getElementById('btn-work');
+    const breakBtn = document.getElementById('btn-break');
+
+    function updateDisplay() {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      display.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function setMode(mode, minutes) {
+      pauseTimer();
+      currentMode = mode;
+      totalSeconds = minutes * 60;
+      updateDisplay();
+      if (mode === 'work') {
+        workBtn.classList.add('active');
+        breakBtn.classList.remove('active');
+      } else {
+        breakBtn.classList.add('active');
+        workBtn.classList.remove('active');
+      }
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (isRunning) return;
+      isRunning = true;
+      startBtn.textContent = 'Pausar';
+      timerInterval = setInterval(() => {
+        if (totalSeconds > 0) {
+          totalSeconds--;
+          updateDisplay();
+        } else {
+          pauseTimer();
+          alert(currentMode === 'work' ? 'Tempo de foco concluído! Hora de descansar.' : 'Pausa concluída! Vamos voltar ao foco?');
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      isRunning = false;
+      startBtn.textContent = 'Iniciar';
+      clearInterval(timerInterval);
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      totalSeconds = currentMode === 'work' ? 25 * 60 : 5 * 60;
+      updateDisplay();
+    }
+
+    updateDisplay();
+  </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Painel de Estudos</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app">
+      <!-- Abas principais: Faculdade / Gerais -->
+      <nav class="main-tabs">
+        <button class="main-tab active" data-main="faculdade">Faculdade</button>
+        <button class="main-tab" data-main="gerais">Gerais</button>
+      </nav>
+
+      <!-- ===== FACULDADE ===== -->
+      <section id="main-faculdade" class="main-content">
+        <div class="sub-tabs">
+          <button class="sub-tab active" data-sub="cronograma">Cronograma</button>
+          <button class="sub-tab" data-sub="pesquisas-fac">Pesquisas</button>
+        </div>
+
+        <!-- Cronograma (agenda) -->
+        <section id="sub-cronograma" class="sub-content">
+          <div class="toolbar">
+            <select id="agenda-semester">
+              <option value="all">Todos os semestres</option>
+            </select>
+            <select id="agenda-filter">
+              <option value="all">Todas as matérias</option>
+            </select>
+            <button id="new-event" class="btn primary">Novo evento</button>
+          </div>
+          <div id="agenda-cards"></div>
+          <p id="agenda-empty" class="empty hidden">Nenhum evento cadastrado.</p>
+        </section>
+
+        <!-- Pesquisas da faculdade -->
+        <section id="sub-pesquisas-fac" class="sub-content hidden">
+          <div class="toolbar">
+            <input id="plano-search" type="text" placeholder="Buscar..." class="search-input">
+            <select id="plano-semester">
+              <option value="all">Todos os semestres</option>
+            </select>
+            <select id="plano-filter">
+              <option value="all">Todas as matérias</option>
+            </select>
+            <div class="progress-wrap">
+              <span id="plano-progress-text">0%</span>
+              <div class="progress-bar"><div id="plano-bar-fill" class="progress-fill"></div></div>
+            </div>
+            <button id="new-disc" class="btn primary">Nova disciplina</button>
+          </div>
+          <div id="plano-tags" class="tag-filter-bar"></div>
+          <div id="plano-list"></div>
+        </section>
+      </section>
+
+      <!-- ===== GERAIS ===== -->
+      <section id="main-gerais" class="main-content hidden">
+        <div class="sub-tabs">
+          <button class="sub-tab active" data-sub="pesquisas-gen">Pesquisas</button>
+        </div>
+
+        <section id="sub-pesquisas-gen" class="sub-content">
+          <div class="toolbar">
+            <input id="gen-search" type="text" placeholder="Buscar..." class="search-input">
+            <input id="gen-new-topic" type="text" placeholder="Nova pesquisa..." class="search-input">
+            <button id="gen-add-topic" class="btn primary">Adicionar</button>
+          </div>
+          <div class="toolbar" style="margin-top:0">
+            <div id="gen-tags" class="tag-filter-bar"></div>
+            <div class="progress-wrap">
+              <span id="gen-progress-text">0%</span>
+              <div class="progress-bar"><div id="gen-bar-fill" class="progress-fill"></div></div>
+            </div>
+          </div>
+          <div id="gen-list"></div>
+          <p id="gen-empty" class="empty hidden">Nenhuma pesquisa cadastrada.</p>
+        </section>
+      </section>
+    </main>
+
+    <!-- Dialog: novo evento -->
+    <dialog id="event-dialog">
+      <form id="event-form" method="dialog">
+        <h2 id="event-dialog-title">Novo evento</h2>
+        <input id="event-id" type="hidden">
+        <label>Titulo <input id="event-title" required maxlength="160"></label>
+        <div class="form-grid">
+          <label>Semestre
+            <select id="event-semester"></select>
+          </label>
+          <label>Tipo
+            <select id="event-type">
+              <option value="prova">Prova</option>
+              <option value="trabalho">Trabalho</option>
+              <option value="atividade">Atividade</option>
+              <option value="outro">Outro</option>
+            </select>
+          </label>
+        </div>
+        <label>Materia
+          <select id="event-subject"></select>
+        </label>
+        <div class="form-grid">
+          <label>Data <input id="event-date" type="date" required></label>
+          <label>Hora (opcional) <input id="event-time" type="time"></label>
+        </div>
+        <label>Observacoes <textarea id="event-notes" maxlength="500"></textarea></label>
+        <div class="dialog-actions">
+          <button type="button" id="cancel-event" class="btn secondary">Cancelar</button>
+          <button type="button" id="delete-event" class="btn danger hidden">Excluir</button>
+          <button type="submit" class="btn primary">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Dialog: novo tema de pesquisa geral -->
+    <dialog id="gen-topic-dialog">
+      <form id="gen-topic-form" method="dialog">
+        <h2 id="gen-topic-dialog-title">Nova pesquisa</h2>
+        <input id="gen-topic-id" type="hidden">
+        <label>Titulo <input id="gen-topic-title" required maxlength="160"></label>
+        <label>Tags (separadas por virgula) <input id="gen-topic-tags" type="text" placeholder="python, web, algoritmos..."></label>
+        <label>Subtopicos (um por linha) <textarea id="gen-topic-items" rows="6" placeholder="Subtopico 1&#10;Subtopico 2&#10;..."></textarea></label>
+        <div class="dialog-actions">
+          <button type="button" id="gen-cancel" class="btn secondary">Cancelar</button>
+          <button type="button" id="gen-delete" class="btn danger hidden">Excluir</button>
+          <button type="submit" class="btn primary">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Dialog: nova/editar disciplina -->
+    <dialog id="disc-dialog">
+      <form id="disc-form" method="dialog">
+        <h2 id="disc-dialog-title">Nova disciplina</h2>
+        <input id="disc-edit-code" type="hidden">
+        <div class="form-grid">
+          <label>Nome <input id="disc-name" required maxlength="160" placeholder="Ex.: Algoritmos e Complexidade"></label>
+          <label>Codigo <input id="disc-code" maxlength="20" placeholder="Ex.: DGT1348"></label>
+        </div>
+        <div class="form-grid">
+          <label>Semestre <input id="disc-semester" maxlength="40" placeholder="Ex.: 5o Semestre"></label>
+          <label>Tags (separadas por virgula) <input id="disc-tags" placeholder="algoritmos, grafos..."></label>
+        </div>
+        <label>Temas e topicos (um por linha; linhas com 2 espacos no inicio sao subtopicos)
+          <textarea id="disc-themes" rows="10" placeholder="Tema 1 — Introducao&#10;  Topico A&#10;  Topico B&#10;Tema 2 — Avancado&#10;  Topico C"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" id="disc-cancel" class="btn secondary">Cancelar</button>
+          <button type="button" id="disc-delete" class="btn danger hidden">Excluir</button>
+          <button type="submit" class="btn primary">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

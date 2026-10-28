@@ -1,0 +1,6 @@
+
+# pacote do desenho (gerado por npm run build:draw)
+# src/renderer/draw/dist/
+
+# dados de uso dos miniapps (ordem recente, local)
+apps/miniapps/miniapp-usage.json

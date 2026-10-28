@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# generated bundles (npm run build:draw)
+app/src/renderer/draw/dist/
+
+# local/personal data
+.usage/
+*.log
+settings.local.json
+.claude/settings.local.json
+.mcp.json
+sessions/
+app/apps/miniapps/miniapp-usage.json
+app/apps/miniapps/cc-f/data.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
