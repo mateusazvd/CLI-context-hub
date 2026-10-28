@@ -107,16 +107,16 @@ body { display: flex; flex-direction: column; height: 100vh; margin: 0; overflow
 .icon-btn { background: transparent; border: 0; border-radius: 6px; width: 32px; height: 32px; flex: none;
   display: grid; place-items: center; color: var(--muted); }
 .icon-btn:hover { background: var(--panel-2); color: var(--text); }
-.side-head #btn-new-harness { font-size: 20px; }
+.side-head #btn-new-workspace { font-size: 20px; }
 .pin { opacity: .45; filter: grayscale(1); }
 .pin.on { opacity: 1; filter: none; background: var(--panel-2); }
 #sidebar.collapsed .brand, #sidebar.collapsed .pin,
-#sidebar.collapsed #btn-new-harness,
+#sidebar.collapsed #btn-new-workspace,
 #sidebar.collapsed .side-section-title, #sidebar.collapsed .side-foot,
 #sidebar.collapsed .h-text { display: none; }
 
 .side-section-title { padding: 12px 16px 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-#harness-list { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; overflow-y: auto; flex: 1; }
+#workspace-list { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; overflow-y: auto; flex: 1; }
 .h-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; background: transparent;
   border: 0; text-align: left; width: 100%; }
 .h-item:hover { background: var(--panel-2); }
@@ -166,7 +166,7 @@ body { display: flex; flex-direction: column; height: 100vh; margin: 0; overflow
 .tab-close:hover { background: var(--line); color: var(--text); }
 #btn-new-tab { margin-bottom: 4px; }
 
-#workspace { flex: 1; min-height: 0; display: flex; }
+#main-area { flex: 1; min-height: 0; display: flex; }
 #stage { flex: 1; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
 .view { position: absolute; inset: 0; }
 
@@ -192,10 +192,10 @@ body { display: flex; flex-direction: column; height: 100vh; margin: 0; overflow
 #btn-browse-workdir { flex: none; border: 1px solid var(--line); border-radius: 8px; }
 .workdir-default-row { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
 .workdir-label { font-size: 12px; color: var(--muted); white-space: nowrap; flex: none; }
-#harness-workdir { flex: 1; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
+#workspace-workdir { flex: 1; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
   color: var(--muted); font: inherit; font-size: 12px; outline: none; cursor: default; min-width: 0; }
-#btn-browse-harness-workdir, #btn-clear-harness-workdir { flex: none; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; padding: 4px 8px; }
-#btn-clear-harness-workdir { font-size: 11px; color: var(--muted); }
+#btn-browse-workspace-workdir, #btn-clear-workspace-workdir { flex: none; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; padding: 4px 8px; }
+#btn-clear-workspace-workdir { font-size: 11px; color: var(--muted); }
 #new-title:focus { border-color: var(--accent); }
 
 .engines { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }

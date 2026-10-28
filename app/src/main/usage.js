@@ -1,5 +1,5 @@
 // Worker de uso do mini-dashboard:
-// - Claude: a statusline do harness-hub grava os limites do plano a cada resposta
+// - Claude: a statusline do cli-context-hub grava os limites do plano a cada resposta
 //   (src/statusline/claude-statusline.js). Nada é consultado à parte.
 // - Copilot: de tempos em tempos abre o CLI num terminal INVISÍVEL, digita /usage e lê a tela.
 // - Gemini: não calcula uso; o painel identifica o modelo configurado como free.
@@ -55,11 +55,11 @@ function screenText (term) {
 }
 
 function probeLaunch (engine, cliPath, shell) {
-  const env = { ...process.env, HARNESS_HUB: '1', HARNESS_HUB_PROBE: '1' }
+  const env = { ...process.env, WORKSPACE_HUB: '1', CCH_PROBE: '1' }
   const args = []
   if (engine === 'gemini') {
     args.push('--screen-reader', '--skip-trust')
-    // O processo do HarnessHub pode herdar variáveis do VS Code/Cursor. Se elas
+    // O processo do CLI Context Hub pode herdar variáveis do VS Code/Cursor. Se elas
     // vazarem para a sonda, o Gemini sugere /ide install e abre onboarding de
     // atalhos, impedindo /stats model de chegar ao prompt.
     for (const key of Object.keys(env)) {
@@ -403,7 +403,7 @@ function createUsageWorker ({ dataDir, getSettings, findCli, getShell, onUpdate,
         status: 'free',
         items: [],
         checkedAt: new Date().toISOString(),
-        message: 'Gemini configurado com a tag free. O HarnessHub não calcula uso ou cota para este CLI.'
+        message: 'Gemini configurado com a tag free. O CLI Context Hub não calcula uso ou cota para este CLI.'
       }
     }
     if (engine === 'claude') {

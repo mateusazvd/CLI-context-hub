@@ -1,6 +1,6 @@
-// Explorador de arquivos: lista e vigia a pasta contexts/ de cada harness.
+// Explorador de arquivos: lista e vigia a pasta contexts/ de cada workspace.
 //
-// Analogia: é a gaveta de documentos do harness. A barra lateral é o "vidro" da gaveta:
+// Analogia: é a gaveta de documentos do workspace. A barra lateral é o "vidro" da gaveta:
 // mostra o que tem dentro e acende uma luz quando alguém coloca ou mexe em algo.
 // A listagem é preguiçosa (uma pasta por vez), então funciona bem mesmo com muitas pastas.
 const fs = require('node:fs')
@@ -10,8 +10,8 @@ const path = require('node:path')
 const IGNORE = new Set(['node_modules', '.git', '.DS_Store', 'Thumbs.db', 'desktop.ini', '__pycache__', '.venv'])
 const MAX_ENTRIES = 2000
 
-function filesRoot (harness) {
-  const root = path.join(harness.path, 'contexts')
+function filesRoot (workspace) {
+  const root = path.join(workspace.path, 'contexts')
   fs.mkdirSync(root, { recursive: true })
   return root
 }
@@ -27,8 +27,8 @@ function resolveInside (root, rel = '') {
 const toRel = (root, abs) => path.relative(root, abs).split(path.sep).join('/')
 
 // Lista UMA pasta: primeiro as subpastas, depois os arquivos, em ordem alfabética
-function listDir (harness, rel = '') {
-  const root = filesRoot(harness)
+function listDir (workspace, rel = '') {
+  const root = filesRoot(workspace)
   const dir = resolveInside(root, rel)
   let entries = []
   try {
@@ -57,15 +57,15 @@ function listDir (harness, rel = '') {
 }
 
 /**
- * Vigia a pasta contexts/ de um harness (inclusive subpastas) e avisa o que mudou.
+ * Vigia a pasta contexts/ de um workspace (inclusive subpastas) e avisa o que mudou.
  * Junta várias mudanças seguidas num único aviso (debounce), como fazem os editores.
  */
 function createFilesWatcher ({ onChange, log = () => {} }) {
-  const watchers = new Map() // harness.name -> { watcher, pending, timer }
+  const watchers = new Map() // workspace.name -> { watcher, pending, timer }
 
-  function watch (harness) {
-    if (watchers.has(harness.name)) return
-    const root = filesRoot(harness)
+  function watch (workspace) {
+    if (watchers.has(workspace.name)) return
+    const root = filesRoot(workspace)
     const entry = { watcher: null, pending: new Set(), timer: null }
     try {
       entry.watcher = fs.watch(root, { recursive: true }, (_event, filename) => {
@@ -83,14 +83,14 @@ function createFilesWatcher ({ onChange, log = () => {} }) {
             try { created = Date.now() - fs.statSync(path.join(root, r)).birthtimeMs < 15000 } catch { exists = false }
             return { rel: r, exists, created }
           })
-          onChange({ harness: harness.name, changes: items })
+          onChange({ workspace: workspace.name, changes: items })
         }, 250)
       })
       entry.watcher.on('error', e => log('files:watch', e))
     } catch (e) {
       log('files:watch', e)
     }
-    watchers.set(harness.name, entry)
+    watchers.set(workspace.name, entry)
   }
 
   function closeAll () {
@@ -102,20 +102,20 @@ function createFilesWatcher ({ onChange, log = () => {} }) {
 }
 
 // Leitura/escrita de texto dentro da files/ (usado pelos desenhos)
-function readText (harness, rel) {
-  const abs = resolveInside(filesRoot(harness), rel)
+function readText (workspace, rel) {
+  const abs = resolveInside(filesRoot(workspace), rel)
   try { return fs.readFileSync(abs, 'utf8') } catch (e) { if (e.code === 'ENOENT') return null; throw e }
 }
-function writeText (harness, rel, text) {
-  const abs = resolveInside(filesRoot(harness), rel)
+function writeText (workspace, rel, text) {
+  const abs = resolveInside(filesRoot(workspace), rel)
   fs.mkdirSync(path.dirname(abs), { recursive: true })
   // gravação direta (não "grava temporário + renomeia"): mantém o mesmo arquivo no disco, o que
   // não confunde o vigia de pastas e não falha no Windows quando outro programa está com ele aberto
   fs.writeFileSync(abs, text, 'utf8')
 }
 // Cria arquivo ou pasta novos (com as pastas intermediárias); nunca sobrescreve o que já existe.
-function createEntry (harness, rel, { dir = false, text = '' } = {}) {
-  const root = filesRoot(harness)
+function createEntry (workspace, rel, { dir = false, text = '' } = {}) {
+  const root = filesRoot(workspace)
   const abs = resolveInside(root, rel)
   if (abs === root) throw new Error('Informe um nome.')
   if (fs.existsSync(abs)) throw new Error(`Já existe "${toRel(root, abs)}".`)
@@ -123,12 +123,12 @@ function createEntry (harness, rel, { dir = false, text = '' } = {}) {
   fs.mkdirSync(path.dirname(abs), { recursive: true })
   fs.writeFileSync(abs, text, { encoding: 'utf8', flag: 'wx' })
 }
-function removeFile (harness, rel) {
-  fs.rmSync(resolveInside(filesRoot(harness), rel), { force: true })
+function removeFile (workspace, rel) {
+  fs.rmSync(resolveInside(filesRoot(workspace), rel), { force: true })
 }
-// Prévia de um desenho para a IA ler: .hub/desenhos/<rel>.png e .md (fora da files/, para não poluir)
-function writeDrawPreview (harness, rel, { png, summary, suffix = '' }) {
-  const base = path.join(harness.path, '.hub', 'desenhos', ...String(rel).split('/'))
+// Prévia de um desenho para a IA ler: .cch/desenhos/<rel>.png e .md (fora da files/, para não poluir)
+function writeDrawPreview (workspace, rel, { png, summary, suffix = '' }) {
+  const base = path.join(workspace.path, '.cch', 'desenhos', ...String(rel).split('/'))
   fs.mkdirSync(path.dirname(base), { recursive: true })
   const out = {}
   if (png) { fs.writeFileSync(`${base}${suffix}.png`, Buffer.from(png, 'base64')); out.png = `${base}${suffix}.png` }
@@ -137,8 +137,8 @@ function writeDrawPreview (harness, rel, { png, summary, suffix = '' }) {
 }
 
 // Move arquivo ou pasta dentro da contexts/ (renomeia se já existe nome igual no destino)
-function moveEntry (harness, srcRel, destFolder) {
-  const root = filesRoot(harness)
+function moveEntry (workspace, srcRel, destFolder) {
+  const root = filesRoot(workspace)
   const srcAbs = resolveInside(root, srcRel)
   if (!fs.existsSync(srcAbs)) throw new Error(`"${srcRel}" não existe.`)
   const name = path.basename(srcAbs)
@@ -161,8 +161,8 @@ function moveEntry (harness, srcRel, destFolder) {
 }
 
 // Renomeia arquivo ou pasta na mesma pasta; nunca sobrescreve (só troca de maiúsculas é permitida)
-function renameEntry (harness, rel, newName) {
-  const root = filesRoot(harness)
+function renameEntry (workspace, rel, newName) {
+  const root = filesRoot(workspace)
   const srcAbs = resolveInside(root, rel)
   if (srcAbs === root) throw new Error('Não é possível renomear a pasta contexts/.')
   if (!fs.existsSync(srcAbs)) throw new Error(`"${rel}" não existe.`)
@@ -176,8 +176,8 @@ function renameEntry (harness, rel, newName) {
 }
 
 // Importa arquivo externo para dentro da contexts/
-function importFile (harness, externalPath, destFolder) {
-  const root = filesRoot(harness)
+function importFile (workspace, externalPath, destFolder) {
+  const root = filesRoot(workspace)
   const destDir = resolveInside(root, destFolder)
   fs.mkdirSync(destDir, { recursive: true })
   const name = path.basename(externalPath)
@@ -193,13 +193,13 @@ function importFile (harness, externalPath, destFolder) {
   return toRel(root, destAbs)
 }
 
-// Lê texto de qualquer arquivo dentro do harness (rel ao harness root, não ao contexts/)
-function readHarnessText (harness, rel) {
-  const root = harness.path
+// Lê texto de qualquer arquivo dentro do workspace (rel ao workspace root, não ao contexts/)
+function readWorkspaceText (workspace, rel) {
+  const root = workspace.path
   const abs = path.resolve(root, String(rel || ''))
   const relBack = path.relative(root, abs)
-  if (relBack.startsWith('..') || path.isAbsolute(relBack)) throw new Error('Caminho fora do harness')
+  if (relBack.startsWith('..') || path.isAbsolute(relBack)) throw new Error('Caminho fora do workspace')
   try { return fs.readFileSync(abs, 'utf8') } catch (e) { if (e.code === 'ENOENT') return null; throw e }
 }
 
-module.exports = { listDir, filesRoot, resolveInside, createFilesWatcher, readText, writeText, createEntry, removeFile, writeDrawPreview, moveEntry, renameEntry, importFile, readHarnessText }
+module.exports = { listDir, filesRoot, resolveInside, createFilesWatcher, readText, writeText, createEntry, removeFile, writeDrawPreview, moveEntry, renameEntry, importFile, readWorkspaceText }

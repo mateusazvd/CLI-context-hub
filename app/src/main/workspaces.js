@@ -1,4 +1,4 @@
-// Leitura dos harnesses armazenados em disco.
+// Leitura dos workspaces armazenados em disco.
 const fs = require('node:fs')
 const path = require('node:path')
 const YAML = require('yaml')
@@ -8,26 +8,26 @@ const { ENGINES, enabledEngines } = require('./engines')
 const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 // getSettings: função que devolve as configurações atuais do programa
-function createHarnessStore (root, getSettings = () => ({ engine: { default: 'claude' } })) {
+function createWorkspaceStore (root, getSettings = () => ({ engine: { default: 'claude' } })) {
   function read (name) {
     const dir = path.join(root, name)
     let cfg = {}
     try {
-      cfg = YAML.parse(fs.readFileSync(path.join(dir, 'harness.yaml'), 'utf8')) || {}
-    } catch { /* sem harness.yaml: usa padrões */ }
+      cfg = YAML.parse(fs.readFileSync(path.join(dir, 'workspace.yaml'), 'utf8')) || {}
+    } catch { /* sem workspace.yaml: usa padrões */ }
 
     const settings = getSettings()
     const available = enabledEngines(settings)
     const declared = Array.isArray(cfg.engines?.supported) ? cfg.engines.supported : ENGINES
     const supported = declared.filter(e => ENGINES.includes(e) && available.includes(e))
-    // padrão do harness > padrão das configurações > primeiro suportado
+    // padrão do workspace > padrão das configurações > primeiro suportado
     const globalDefault = settings.engine.default
     const def = ENGINES.includes(cfg.engines?.default) && supported.includes(cfg.engines.default)
       ? cfg.engines.default
       : supported.includes(globalDefault) ? globalDefault : supported[0] || null
-    const defaultFrom = ENGINES.includes(cfg.engines?.default) && supported.includes(cfg.engines.default) ? 'harness' : 'settings'
+    const defaultFrom = ENGINES.includes(cfg.engines?.default) && supported.includes(cfg.engines.default) ? 'workspace' : 'settings'
 
-    // workdir vazio/null (no YAML, "~" sozinho também é null) = raiz do harness.
+    // workdir vazio/null (no YAML, "~" sozinho também é null) = raiz do workspace.
     // Assim os CLIs encontram AGENTS.md, CLAUDE.md e as skills geradas em .claude/skills.
     // Os arquivos de trabalho vão para files/ (regra da skill onde-salvar-arquivos).
     let workdir
@@ -50,7 +50,7 @@ function createHarnessStore (root, getSettings = () => ({ engine: { default: 'cl
         : [],
       path: dir,
       workdir,
-      workdirWarning: workdirOk ? null : `workdir "${cfg.workdir}" não existe; usando a pasta do harness`,
+      workdirWarning: workdirOk ? null : `workdir "${cfg.workdir}" não existe; usando a pasta do workspace`,
       engines: { default: def, defaultFrom, supported },
       ...Object.fromEntries(ENGINES.map(engine => [engine, cfg[engine] || {}]))
     }
@@ -65,7 +65,7 @@ function createHarnessStore (root, getSettings = () => ({ engine: { default: 'cl
   }
 
   function get (name) {
-    if (!isDir(path.join(root, name))) throw new Error(`Harness não encontrado: ${name}`)
+    if (!isDir(path.join(root, name))) throw new Error(`Workspace não encontrado: ${name}`)
     return read(name)
   }
 
@@ -74,23 +74,23 @@ function createHarnessStore (root, getSettings = () => ({ engine: { default: 'cl
     title = String(title || '').trim()
     description = String(description || '').trim()
     if (!NAME_RE.test(name) || name.startsWith('_')) {
-      throw new Error('O nome deve usar kebab-case (ex.: meu-harness), sem espaços.')
+      throw new Error('O nome deve usar kebab-case (ex.: meu-workspace), sem espaços.')
     }
-    if (!title) throw new Error('Informe um título para o harness.')
+    if (!title) throw new Error('Informe um título para o workspace.')
     if (!isDir(root)) fs.mkdirSync(root, { recursive: true })
 
     const template = path.join(root, '_template')
     const target = path.join(root, name)
-    if (!isDir(template)) throw new Error('Template padrão de harness não encontrado.')
-    if (fs.existsSync(target)) throw new Error(`Já existe um harness chamado "${name}".`)
+    if (!isDir(template)) throw new Error('Template padrão de workspace não encontrado.')
+    if (fs.existsSync(target)) throw new Error(`Já existe um workspace chamado "${name}".`)
 
     fs.cpSync(template, target, { recursive: true, errorOnExist: true })
 
-    const yamlFile = path.join(target, 'harness.yaml')
+    const yamlFile = path.join(target, 'workspace.yaml')
     let yaml = fs.readFileSync(yamlFile, 'utf8')
     yaml = yaml.replace(/^name:.*$/m, `name: ${name}`)
       .replace(/^title:.*$/m, `title: ${JSON.stringify(title)}`)
-      .replace(/^description:.*$/m, `description: ${JSON.stringify(description || 'Descreva para que este harness serve.')}`)
+      .replace(/^description:.*$/m, `description: ${JSON.stringify(description || 'Descreva para que este workspace serve.')}`)
     fs.writeFileSync(yamlFile, yaml, 'utf8')
 
     const agentsFile = path.join(target, 'AGENTS.md')
@@ -105,4 +105,4 @@ function createHarnessStore (root, getSettings = () => ({ engine: { default: 'cl
   return { root, list, get, create }
 }
 
-module.exports = { createHarnessStore, ENGINES }
+module.exports = { createWorkspaceStore, ENGINES }

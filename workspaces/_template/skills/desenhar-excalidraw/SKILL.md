@@ -3,9 +3,9 @@ name: desenhar-excalidraw
 description: Use quando o usuário pedir para desenhar, diagramar, esboçar, rabiscar ou visualizar algo (arquitetura, fluxo, fluxograma, sequência, telas, mapa mental, organograma, ER), quando pedir um "excalidraw", ou quando pedir para olhar, ler, entender, revisar, alterar ou implementar um desenho existente (.excalidraw).
 ---
 
-# Desenhar com Excalidraw no harness-hub
+# Desenhar com Excalidraw no cli-context-hub
 
-Desenhos são arquivos `.excalidraw` dentro de `files/`. O harness-hub vigia essa pasta: quando você
+Desenhos são arquivos `.excalidraw` dentro de `files/`. O cli-context-hub vigia essa pasta: quando você
 cria ou altera um desenho, ele **abre sozinho numa subaba ao lado do terminal** e o usuário vê na hora.
 O usuário também desenha e edita ali; o app salva no mesmo arquivo. Vocês trabalham no mesmo quadro.
 
@@ -69,8 +69,8 @@ Excalidraw logo depois; isso é esperado.
 
 Antes de alterar ou implementar algo a partir de um desenho, leia o resumo que o app mantém atualizado:
 
-- **Resumo (ids, textos, conexões):** `.hub/desenhos/<caminho-dentro-de-files>.md`
-  ex.: `.hub/desenhos/desenhos/arquitetura-api.excalidraw.md`
+- **Resumo (ids, textos, conexões):** `.cch/desenhos/<caminho-dentro-de-files>.md`
+  ex.: `.cch/desenhos/desenhos/arquitetura-api.excalidraw.md`
 - **Imagem:** o mesmo caminho com `.png` — olhe a imagem quando o layout ou rabiscos importarem.
 
 Use os `id`s do resumo nos seus patches. O resumo e a imagem são atualizados sempre que o desenho muda,

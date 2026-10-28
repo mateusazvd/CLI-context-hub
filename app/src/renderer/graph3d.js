@@ -1,4 +1,4 @@
-// Grafo das pastas do harness no estilo do Obsidian: pontos planos e discretos, linhas finas,
+// Grafo das pastas do workspace no estilo do Obsidian: pontos planos e discretos, linhas finas,
 // rótulos pequenos e destaque da pasta e dos vizinhos ao passar o mouse.
 // Reduzido: gira sozinho. Expandido: arrastar gira. Nos dois: roda do mouse aproxima, clique duplo reenquadra.
 // Clicar numa pasta com subpastas abre ou fecha o ramo (anel = ramo fechado).

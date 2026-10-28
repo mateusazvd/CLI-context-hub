@@ -7,11 +7,11 @@ const vm = require('node:vm')
 const { createRequire } = require('node:module')
 const { ENGINES, buildEngineArgs, engineEnvironment, getEngine } = require('../src/main/engines')
 const { createSettings } = require('../src/main/settings')
-const { createHarnessStore } = require('../src/main/harnesses')
-const { syncHarness } = require('../src/main/sync')
+const { createWorkspaceStore } = require('../src/main/workspaces')
+const { syncWorkspace } = require('../src/main/sync')
 
 function fixture (t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harnesshub-engines-'))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cch-engines-'))
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }))
   return dir
 }
@@ -35,16 +35,16 @@ function loadWithMocks (file, mocks, globals = {}) {
 }
 
 test('argumentos preservam Claude/Copilot, Gemini e iniciam Codex com start e no-daemon', () => {
-  const common = { sessionId: 'uuid', name: 'aba', addDirs: ['C:\\meu harness'], prompt: 'leia', model: 'modelo', extraArgs: ['--debug'] }
+  const common = { sessionId: 'uuid', name: 'aba', addDirs: ['C:\\meu workspace'], prompt: 'leia', model: 'modelo', extraArgs: ['--debug'] }
   assert.deepEqual(buildEngineArgs({ ...common, engine: 'claude' }),
-    ['leia', '--session-id', 'uuid', '--name', 'aba', '--add-dir', 'C:\\meu harness', '--model', 'modelo', '--debug'])
+    ['leia', '--session-id', 'uuid', '--name', 'aba', '--add-dir', 'C:\\meu workspace', '--model', 'modelo', '--debug'])
   assert.deepEqual(buildEngineArgs({ ...common, engine: 'copilot' }),
-    ['--session-id', 'uuid', '--name', 'aba', '--add-dir', 'C:\\meu harness', '--model', 'modelo', '-i', 'leia', '--debug'])
+    ['--session-id', 'uuid', '--name', 'aba', '--add-dir', 'C:\\meu workspace', '--model', 'modelo', '-i', 'leia', '--debug'])
   assert.deepEqual(buildEngineArgs({ ...common, engine: 'gemini' }),
-    ['--session-id', 'uuid', '--include-directories', 'C:\\meu harness', '--model', 'modelo', '--prompt-interactive', 'leia', '--debug'])
+    ['--session-id', 'uuid', '--include-directories', 'C:\\meu workspace', '--model', 'modelo', '--prompt-interactive', 'leia', '--debug'])
   assert.deepEqual(buildEngineArgs({ ...common, engine: 'ollama' }), ['--debug'])
   assert.deepEqual(buildEngineArgs({ ...common, engine: 'codex' }),
-    ['start', '--no-daemon', 'leia', '--add-dir', 'C:\\meu harness', '--model', 'modelo', '--debug'])
+    ['start', '--no-daemon', 'leia', '--add-dir', 'C:\\meu workspace', '--model', 'modelo', '--debug'])
   for (const engine of ENGINES) {
     assert.deepEqual(buildEngineArgs({ engine, sessionId: 'uuid', resume: true, name: 'ignorado' }),
       engine === 'codex' ? ['start', '--no-daemon'] : getEngine(engine).bare ? [] : ['--resume', 'uuid'])
@@ -74,12 +74,12 @@ test('settings legados migram em memória; gravação valida tudo antes de persi
   assert.deepEqual(settings.get().engine.enabled, ENGINES)
 })
 
-test('harness intersecta compatibilidade com ativação, sem fallback a um desativado', t => {
+test('workspace intersecta compatibilidade com ativação, sem fallback a um desativado', t => {
   const root = fixture(t)
   const dir = path.join(root, 'demo')
   fs.mkdirSync(dir)
-  const file = path.join(dir, 'harness.yaml')
-  const store = createHarnessStore(root, () => ({ engine: { default: 'gemini', enabled: ['gemini'] } }))
+  const file = path.join(dir, 'workspace.yaml')
+  const store = createWorkspaceStore(root, () => ({ engine: { default: 'gemini', enabled: ['gemini'] } }))
   fs.writeFileSync(file, 'engines:\n  supported: null\n')
   assert.deepEqual(store.get('demo').engines.supported, ['gemini'])
   assert.equal(store.get('demo').engines.default, 'gemini')
@@ -94,21 +94,21 @@ test('sincronização Gemini é repetível, remove só gerados e preserva contex
   fs.mkdirSync(skill, { recursive: true })
   fs.writeFileSync(path.join(skill, 'SKILL.md'), 'demo')
   fs.writeFileSync(path.join(dir, 'AGENTS.md'), '# contexto')
-  syncHarness(dir)
-  syncHarness(dir)
+  syncWorkspace(dir)
+  syncWorkspace(dir)
   const output = path.join(dir, '.gemini', 'skills', 'demo', 'SKILL.md')
   assert.equal(fs.readFileSync(output, 'utf8'), 'demo')
   assert.match(fs.readFileSync(path.join(dir, 'GEMINI.md'), 'utf8'), /@AGENTS.md/)
   fs.writeFileSync(path.join(dir, 'GEMINI.md'), '# manual')
   fs.rmSync(skill, { recursive: true })
-  syncHarness(dir)
+  syncWorkspace(dir)
   assert.equal(fs.existsSync(output), false)
   assert.equal(fs.readFileSync(path.join(dir, 'GEMINI.md'), 'utf8'), '# manual')
   fs.mkdirSync(skill, { recursive: true })
   fs.writeFileSync(path.join(skill, 'SKILL.md'), 'novo')
   fs.mkdirSync(path.dirname(output), { recursive: true })
   fs.writeFileSync(output, 'manual')
-  assert.throws(() => syncHarness(dir), /não gerenciada/)
+  assert.throws(() => syncWorkspace(dir), /não gerenciada/)
   assert.equal(fs.readFileSync(output, 'utf8'), 'manual')
 })
 
@@ -153,12 +153,12 @@ test('Windows nunca usa PowerShell configurado e cai para CMD', () => {
       'node:child_process': { execFileSync: () => 'C:\\Windows\\System32\\cmd.exe\n' }
     }, { process: { platform: 'win32', env: { ComSpec: 'C:\\Windows\\System32\\cmd.exe' } } })
     assert.deepEqual(terminals.browserCdpEnvironment(), {
-      HARNESS_HUB_BROWSER_CDP_URL: 'http://127.0.0.1:9222',
-      HARNESS_HUB_BROWSER_CDP_PORT: '9222'
+      CCH_BROWSER_CDP_URL: 'http://127.0.0.1:9222',
+      CCH_BROWSER_CDP_PORT: '9222'
     })
     assert.deepEqual(terminals.browserCdpEnvironment('9333'), {
-      HARNESS_HUB_BROWSER_CDP_URL: 'http://127.0.0.1:9333',
-      HARNESS_HUB_BROWSER_CDP_PORT: '9333'
+      CCH_BROWSER_CDP_URL: 'http://127.0.0.1:9333',
+      CCH_BROWSER_CDP_PORT: '9333'
     })
     assert.throws(() => terminals.browserCdpEnvironment('0'), /Porta CDP inválida/)
     assert.throws(() => terminals.browserCdpEnvironment('abc'), /Porta CDP inválida/)
@@ -177,7 +177,7 @@ test('Ollama só abre o CLI na pasta da sessão: sem sessão, variáveis nem ski
   const dir = fixture(t)
   fs.mkdirSync(path.join(dir, 'skills', 'demo'), { recursive: true })
   fs.writeFileSync(path.join(dir, 'skills', 'demo', 'SKILL.md'), 'skill')
-  syncHarness(dir, 'ollama')
+  syncWorkspace(dir, 'ollama')
   for (const name of ['.claude', '.github', '.gemini', 'CLAUDE.md', 'GEMINI.md']) assert.equal(fs.existsSync(path.join(dir, name)), false)
   const terminals = loadWithMocks(path.resolve(__dirname, '../src/main/terminals.js'), {
     'node-pty': {},
@@ -367,14 +367,14 @@ test('IPC bloqueia desativado, exige confirmação e encerra apenas terminais af
   loadWithMocks(path.resolve(__dirname, '../src/main/main.js'), {
     electron,
     './settings': { createSettings: () => config },
-    './harnesses': { createHarnessStore: () => ({ get: () => h }) },
+    './workspaces': { createWorkspaceStore: () => ({ get: () => h }) },
     './terminals': {
       buildEngineArgs, preflight: () => ({ cli: 'gemini' }), defaultShell: () => ({}), findCli: () => 'gemini',
       createTerminalManager: () => ({ start: () => ({ id: `t${++count}` }), kill: id => killed.push(id) })
     },
     './usage': { createUsageWorker: () => ({ reschedule () {} }) },
     './files': { createFilesWatcher: () => ({ watch () {} }) },
-    './sync': { syncHarness () {} },
+    './sync': { syncWorkspace () {} },
     './miniapps': { createMiniappStore: () => ({}) },
     './sessions': {
       get: () => session,
@@ -384,8 +384,8 @@ test('IPC bloqueia desativado, exige confirmação e encerra apenas terminais af
         return tab
       }
     }
-  }, { process: { env: { HARNESS_HUB_SETTINGS: config.file }, on () {} }, console: { error () {} } })
-  const open = engine => handlers.get('session:open')({}, { harness: 'demo', sessionId: 'sessao', engine })
+  }, { process: { env: { CCH_SETTINGS: config.file }, on () {} }, console: { error () {} } })
+  const open = engine => handlers.get('session:open')({}, { workspace: 'demo', sessionId: 'sessao', engine })
   await open('gemini')
   await open('copilot')
   const save = handlers.get('settings:save')
@@ -395,7 +395,7 @@ test('IPC bloqueia desativado, exige confirmação e encerra apenas terminais af
   assert.deepEqual(killed, ['t1'])
   await assert.rejects(open('gemini'), /desativado/)
   await assert.rejects(handlers.get('session:open')({}, {
-    harness: 'demo', sessionId: 'sessao', tabId: 'aba-1'
+    workspace: 'demo', sessionId: 'sessao', tabId: 'aba-1'
   }), /desativado/)
   assert.equal(session.tabs.length, 2)
   save({}, { 'engine.enabled': ENGINES }, true)

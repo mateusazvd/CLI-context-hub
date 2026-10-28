@@ -1,4 +1,4 @@
-# <Nome do harness>
+# <Nome do workspace>
 
 ## Contexto
 <!-- Quem é você neste contexto, qual o domínio, quais projetos fazem parte -->
@@ -20,7 +20,7 @@
 <!-- Como rodar, testar, fazer build e deploy -->
 
 ## Onde criar arquivos
-- Todo arquivo de trabalho fica em `files/`, dentro da pasta deste harness. Antes de criar ou salvar qualquer arquivo, siga a skill `onde-salvar-arquivos`: se o usuário não disse onde salvar, pergunte se é numa pasta existente de `files/`, numa pasta nova ou na raiz de `files/`.
+- Todo arquivo de trabalho fica em `files/`, dentro da pasta deste workspace. Antes de criar ou salvar qualquer arquivo, siga a skill `onde-salvar-arquivos`: se o usuário não disse onde salvar, pergunte se é numa pasta existente de `files/`, numa pasta nova ou na raiz de `files/`.
 - Para desenhar, diagramar ou ler um desenho (`.excalidraw`), siga a skill `desenhar-excalidraw`: o desenho abre numa subaba ao lado do terminal e o usuário edita junto com você.
 - Nunca salve arquivos de trabalho em `sessions/` nem nas pastas de configuração (`skills/`, `agents/`, `commands/`, `mcp/`, `.claude/`, `.github/`).
 

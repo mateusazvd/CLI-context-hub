@@ -1,7 +1,7 @@
 {
-  "name": "harness-hub",
+  "name": "cli-context-hub",
   "version": "0.3.0",
-  "description": "Gerenciador de harnesses para Claude Code CLI e Copilot CLI",
+  "description": "Gerenciador de workspaces para Claude Code CLI e Copilot CLI",
   "main": "src/main/main.js",
   "scripts": {
     "test": "node --test tests/engines.test.js tests/browser-automation.test.js",

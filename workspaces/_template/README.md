@@ -1,16 +1,16 @@
-# Modelo de harness
+# Modelo de workspace
 
-Esta pasta é o **molde** de todo harness. Cada peça tem um papel:
+Esta pasta é o **molde** de todo workspace. Cada peça tem um papel:
 
 | Pasta / arquivo | O que é | Analogia |
 |---|---|---|
-| `harness.yaml` | Identidade e configuração do harness | A etiqueta da caixa |
+| `workspace.yaml` | Identidade e configuração do workspace | A etiqueta da caixa |
 | `AGENTS.md` | Regras e contexto que o modelo sempre lê | O manual de conduta |
 | `skills/` | Procedimentos sob demanda (um `SKILL.md` por pasta) | Receitas guardadas na gaveta |
 | `agents/` | Subagentes especialistas (um `.md` por agente) | Colegas que você chama para tarefas específicas |
 | `commands/` | Prompts prontos, chamados como `/comando` | Atalhos do teclado |
 | `mcp/mcp.json` | Ferramentas externas (servidores MCP) | As tomadas onde se pluga equipamento |
-| `files/` | Todos os arquivos de trabalho do harness, compartilhados por todas as sessões | A gaveta de documentos da sala |
+| `files/` | Todos os arquivos de trabalho do workspace, compartilhados por todas as sessões | A gaveta de documentos da sala |
 | `sessions/` | Uma pasta por sessão, só com memória e registro (handoff, log, mensagens) | O prontuário compartilhado entre os dois médicos |
 
 ## Como cada peça vira arquivo de cada CLI

@@ -1,4 +1,4 @@
-// Tradutor do harness: copia o formato neutro do harness para as pastas que cada CLI lê.
+// Tradutor do workspace: copia o formato neutro do workspace para as pastas que cada CLI lê.
 //
 // Analogia: os livros (skills, agentes, comandos) ficam guardados numa caixa (skills/, agents/...).
 // Cada leitor só procura numa estante com nome próprio (.claude/, .github/). Antes de abrir uma aba,
@@ -17,8 +17,8 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { getEngine } = require('./engines')
 
-const MARK = '<!-- gerado pelo harness-hub: edite AGENTS.md, não este arquivo -->'
-const GENERATED_NOTE = 'Gerado pelo harness-hub a partir de skills/, agents/ e commands/ do harness.\nNão edite aqui: as alterações são apagadas na próxima aba aberta.\n'
+const MARK = '<!-- gerado pelo cli-context-hub: edite AGENTS.md, não este arquivo -->'
+const GENERATED_NOTE = 'Gerado pelo cli-context-hub a partir de skills/, agents/ e commands/ do workspace.\nNão edite aqui: as alterações são apagadas na próxima aba aberta.\n'
 
 const visible = name => !name.startsWith('_') && !name.startsWith('.')
 
@@ -36,12 +36,12 @@ function resetDir (dir) {
   }
 }
 
-function syncHarness (harnessPath, engine) {
+function syncWorkspace (workspacePath, engine) {
   if (engine != null) getEngine(engine)
   const claude = engine == null || engine === 'claude'
   const copilot = engine == null || engine === 'copilot'
   const gemini = engine == null || engine === 'gemini'
-  const p = (...x) => path.join(harnessPath, ...x)
+  const p = (...x) => path.join(workspacePath, ...x)
   const report = { skills: [], agents: [], commands: [], claudeMd: false, mcp: false }
 
   // skills -> .claude/skills (lido pelo Claude e pelo Copilot)
@@ -84,7 +84,7 @@ function syncHarness (harnessPath, engine) {
   // Só substitui/remove skills Gemini identificadas como geradas pelo host.
   if (gemini) {
     const geminiSkills = p('.gemini', 'skills')
-    const marker = '.harness-hub-generated'
+    const marker = '.cch-generated'
     fs.mkdirSync(geminiSkills, { recursive: true })
     for (const item of list(geminiSkills, d => d.isDirectory())) {
       const dir = path.join(geminiSkills, item.name)
@@ -136,4 +136,4 @@ function syncHarness (harnessPath, engine) {
   return report
 }
 
-module.exports = { syncHarness }
+module.exports = { syncWorkspace }

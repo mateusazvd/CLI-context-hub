@@ -1,6 +1,6 @@
-// Árvore de pastas do harness. Só os ramos abertos aparecem no grafo;
+// Árvore de pastas do workspace. Só os ramos abertos aparecem no grafo;
 // por padrão ficam abertas a raiz e toda a pasta contexts/.
-class HarnessGraph {
+class WorkspaceGraph {
   constructor (tree) {
     this.nodes = []
     this.expanded = new Set()
@@ -61,4 +61,4 @@ class HarnessGraph {
   }
 }
 
-if (typeof module !== 'undefined') module.exports = HarnessGraph
+if (typeof module !== 'undefined') module.exports = WorkspaceGraph

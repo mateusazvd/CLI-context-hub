@@ -1,4 +1,4 @@
-// Leitor/editor de Markdown do harness-hub.
+// Leitor/editor de Markdown do cli-context-hub.
 // - Visualizar: markdown-it gera o HTML e o DOMPurify limpa (a IA também escreve esses arquivos:
 //   nada de <script> ou atributos on*). Blocos ```mermaid viram diagrama.
 // - Editar: CodeMirror 6 com realce de Markdown; você edita o texto puro do arquivo.

@@ -1,5 +1,5 @@
 // Sessões: cada uma é uma pasta sessions/<id>/ só com memória e registro: handoff.md, log.md e messages.md.
-// Sessões não têm arquivos de trabalho: esses ficam na pasta files/ do harness, compartilhada por todas.
+// Sessões não têm arquivos de trabalho: esses ficam na pasta files/ do workspace, compartilhada por todas.
 // Todas as escritas passam por uma fila por sessão ("um único escrivão").
 const fs = require('node:fs')
 const path = require('node:path')
@@ -39,8 +39,8 @@ function enqueue (key, fn) {
 }
 
 // ---------- leitura ----------
-function sessionsDir (harness) {
-  return path.join(harness.path, 'sessions')
+function sessionsDir (workspace) {
+  return path.join(workspace.path, 'sessions')
 }
 
 function readHandoff (sessionPath) {
@@ -73,8 +73,8 @@ function summarize (sessionPath) {
   }
 }
 
-function list (harness) {
-  const dir = sessionsDir(harness)
+function list (workspace) {
+  const dir = sessionsDir(workspace)
   if (!isDir(dir)) return []
   return fs.readdirSync(dir, { withFileTypes: true })
     .filter(d => d.isDirectory() && !d.name.startsWith('_') && !d.name.startsWith('.'))
@@ -85,8 +85,8 @@ function list (harness) {
     .sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')))
 }
 
-function get (harness, id) {
-  const p = path.join(sessionsDir(harness), id)
+function get (workspace, id) {
+  const p = path.join(sessionsDir(workspace), id)
   if (!fs.existsSync(path.join(p, 'handoff.md'))) throw new Error(`Sessão não encontrada: ${id}`)
   return summarize(p)
 }
@@ -112,10 +112,10 @@ function appendLog (sessionPath, { tab = null, engine = null, text }) {
   })
 }
 
-async function create (harness, { title, workdir, topics }) {
+async function create (workspace, { title, workdir, topics }) {
   title = String(title || '').trim() || 'Nova sessão'
   workdir = workdir ? String(workdir).trim() || null : null
-  const dir = sessionsDir(harness)
+  const dir = sessionsDir(workspace)
   fs.mkdirSync(dir, { recursive: true })
 
   // id único: aaaa-mm-dd-slug(-2, -3...)
@@ -124,7 +124,7 @@ async function create (harness, { title, workdir, topics }) {
   for (let i = 2; fs.existsSync(path.join(dir, id)); i++) id = `${base}-${i}`
   const sessionPath = path.join(dir, id)
 
-  // copia do modelo do harness só os três arquivos de memória (qualquer outra coisa no modelo é ignorada)
+  // copia do modelo do workspace só os três arquivos de memória (qualquer outra coisa no modelo é ignorada)
   fs.mkdirSync(sessionPath, { recursive: true })
   const tpl = path.join(dir, TEMPLATE_DIR)
   for (const name of SESSION_FILES) {
@@ -149,7 +149,7 @@ async function create (harness, { title, workdir, topics }) {
     last_engine: null,
     last_tab: null,
     projects: [],
-    topics: Array.isArray(topics) ? normalizeTopics(topics) : normalizeTopics(harness.defaultTopics),
+    topics: Array.isArray(topics) ? normalizeTopics(topics) : normalizeTopics(workspace.defaultTopics),
     tabs: [],
     workdir: workdir || null
   }
@@ -201,8 +201,8 @@ async function touchTab (sessionPath, tabId) {
 }
 
 // Apaga a pasta da sessão (handoff, log, mensagens). Só dentro de sessions/ e nunca modelos (_*).
-function remove (harness, id) {
-  const dir = sessionsDir(harness)
+function remove (workspace, id) {
+  const dir = sessionsDir(workspace)
   const target = path.resolve(dir, String(id))
   if (path.dirname(target) !== path.resolve(dir) || path.basename(target).startsWith('_') || path.basename(target).startsWith('.')) {
     throw new Error(`Sessão inválida: ${id}`)

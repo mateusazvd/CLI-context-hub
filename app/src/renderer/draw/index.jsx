@@ -1,4 +1,4 @@
-// Módulo de desenho do harness-hub: Excalidraw (React) empacotado pelo esbuild.
+// Módulo de desenho do cli-context-hub: Excalidraw (React) empacotado pelo esbuild.
 // O resto da tela é JS puro; este arquivo expõe uma API simples em window.HubDraw.
 //
 // Formatos que a IA pode escrever num arquivo .excalidraw (o app converte para o formato completo):

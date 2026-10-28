@@ -5,10 +5,10 @@ const os = require('node:os')
 const path = require('node:path')
 const vm = require('node:vm')
 const { createRequire } = require('node:module')
-const { syncHarness } = require('../src/main/sync')
+const { syncWorkspace } = require('../src/main/sync')
 
 function fixture (t) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'harnesshub-sync-'))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cch-sync-'))
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }))
   for (const [name, content] of [
     ['skills/demo/SKILL.md', 'skill'],
@@ -39,7 +39,7 @@ test('Gemini ignora mkdir EPERM em .claude e nao cria configuracao de outros CLI
       : localRequire(name)
   }
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), context, { filename: file })
-  const sync = context.module.exports.syncHarness
+  const sync = context.module.exports.syncWorkspace
   sync(dir, 'gemini')
   sync(dir, 'gemini')
   assert.equal(fs.readFileSync(path.join(dir, '.gemini', 'skills', 'demo', 'SKILL.md'), 'utf8'), 'skill')
@@ -56,7 +56,7 @@ for (const engine of ['claude', 'copilot']) {
     const manual = path.join(dir, '.gemini', 'skills', 'demo', 'SKILL.md')
     fs.mkdirSync(path.dirname(manual), { recursive: true })
     fs.writeFileSync(manual, 'manual')
-    syncHarness(dir, engine)
+    syncWorkspace(dir, engine)
     assert.equal(fs.readFileSync(manual, 'utf8'), 'manual')
     assert.equal(fs.existsSync(path.join(dir, 'GEMINI.md')), false)
     assert.equal(fs.readFileSync(path.join(dir, '.claude', 'skills', 'demo', 'SKILL.md'), 'utf8'), 'skill')
@@ -70,9 +70,9 @@ for (const engine of ['claude', 'copilot']) {
 
 test('sincronizacao completa permanece disponivel e motor invalido falha antes de gravar', t => {
   const dir = fixture(t)
-  assert.throws(() => syncHarness(dir, 'invalido'), /desconhecido/)
+  assert.throws(() => syncWorkspace(dir, 'invalido'), /desconhecido/)
   assert.equal(fs.existsSync(path.join(dir, '.claude')), false)
-  syncHarness(dir)
+  syncWorkspace(dir)
   for (const name of ['.claude', '.github', '.gemini', 'CLAUDE.md', 'GEMINI.md']) {
     assert.equal(fs.existsSync(path.join(dir, name)), true)
   }

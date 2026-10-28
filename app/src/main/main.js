@@ -1,29 +1,29 @@
 // Processo principal (a "cozinha"): acesso ao sistema, sessões e terminais.
 const { app, BrowserWindow, WebContentsView, session: electronSession, ipcMain, shell, dialog } = require('electron')
-const BROWSER_CDP_PORT = process.env.HARNESS_HUB_BROWSER_CDP_PORT || '9222'
+const BROWSER_CDP_PORT = process.env.CCH_BROWSER_CDP_PORT || '9222'
 
 // CDP — permite controlar o navegador embutido via terminal (Playwright/Puppeteer).
 // A porta pode ser alterada para evitar conflito com outro Chromium local.
 app.commandLine.appendSwitch('remote-debugging-port', BROWSER_CDP_PORT)
 const path = require('node:path')
 const fs = require('node:fs')
-const { createHarnessStore } = require('./harnesses')
+const { createWorkspaceStore } = require('./workspaces')
 const { createSettings } = require('./settings')
 const sessions = require('./sessions')
 const { createTerminalManager, buildEngineArgs, engineEnvironment, browserCdpEnvironment, preflight, findCli, defaultShell } = require('./terminals')
 const { createUsageWorker } = require('./usage')
 const files = require('./files')
 const automation = require('./browser-automation')
-const { syncHarness } = require('./sync')
+const { syncWorkspace } = require('./sync')
 const { createMiniappStore } = require('./miniapps')
 const { ENGINES, getEngine, canResume, enabledEngines } = require('./engines')
 
-// Onde os harnesses ficam: variável HARNESS_HUB_HOME ou ../harnesses ao lado do app
-const HARNESS_ROOT = process.env.HARNESS_HUB_HOME || path.resolve(app.getAppPath(), '..', 'harnesses')
-// Configurações: HARNESS_HUB_SETTINGS ou settings.yaml na raiz do harness-hub (ao lado de harnesses/ e app/)
-const SETTINGS_FILE = process.env.HARNESS_HUB_SETTINGS || path.resolve(app.getAppPath(), '..', 'settings.yaml')
+// Onde os workspaces ficam: variável CCH_HOME ou ../workspaces ao lado do app
+const WORKSPACE_ROOT = process.env.CCH_HOME || path.resolve(app.getAppPath(), '..', 'workspaces')
+// Configurações: CCH_SETTINGS ou settings.yaml na raiz do cli-context-hub (ao lado de workspaces/ e app/)
+const SETTINGS_FILE = process.env.CCH_SETTINGS || path.resolve(app.getAppPath(), '..', 'settings.yaml')
 const settings = createSettings(SETTINGS_FILE)
-const store = createHarnessStore(HARNESS_ROOT, settings.get)
+const store = createWorkspaceStore(WORKSPACE_ROOT, settings.get)
 const MINIAPPS_ROOT = path.resolve(app.getAppPath(), 'apps', 'miniapps')
 const miniapps = createMiniappStore(MINIAPPS_ROOT)
 const MINIAPP_USAGE_FILE = path.resolve(MINIAPPS_ROOT, 'miniapp-usage.json')
@@ -34,8 +34,8 @@ function saveMiniappUsage (usage) {
   try { fs.writeFileSync(MINIAPP_USAGE_FILE, JSON.stringify(usage, null, 2), 'utf8') } catch {}
 }
 
-// Registro de erros em harness-hub/harness-hub.log (ajuda a diagnosticar no Windows)
-const LOG_FILE = path.resolve(path.dirname(SETTINGS_FILE), 'harness-hub.log')
+// Registro de erros em cli-context-hub/cli-context-hub.log (ajuda a diagnosticar no Windows)
+const LOG_FILE = path.resolve(path.dirname(SETTINGS_FILE), 'cli-context-hub.log')
 function logError (where, err) {
   const line = `[${new Date().toISOString()}] ${where}: ${err && err.stack ? err.stack : err}\n`
   try { fs.appendFileSync(LOG_FILE, line, 'utf8') } catch {}
@@ -72,7 +72,7 @@ ipcMain.handle('usage:get', () => usage.get())
 ipcMain.handle('usage:refresh', () => { usage.refresh(); return usage.get() })
 
 
-// Arquivo de settings extra passado ao Claude (--settings): liga a statusline do harness-hub.
+// Arquivo de settings extra passado ao Claude (--settings): liga a statusline do cli-context-hub.
 // Usar um arquivo evita ter que escapar JSON na linha de comando do CMD.
 function claudeSettingsFile () {
   const script = path.join(__dirname, '..', 'statusline', 'claude-statusline.js').replace(/\\/g, '/')
@@ -86,31 +86,31 @@ function claudeSettingsFile () {
 }
 
 
-// ---------- explorador (pasta contexts/ do harness) ----------
+// ---------- explorador (pasta contexts/ do workspace) ----------
 const filesWatcher = files.createFilesWatcher({
   onChange: payload => send('files:changed', payload),
   log: logError
 })
-ipcMain.handle('files:list', (_e, { harness, rel }) => {
-  const h = store.get(harness)
+ipcMain.handle('files:list', (_e, { workspace, rel }) => {
+  const h = store.get(workspace)
   filesWatcher.watch(h) // começa a vigiar na primeira vez que a pasta é aberta
   return files.listDir(h, rel)
 })
-ipcMain.handle('files:open', async (_e, { harness, rel }) => {
-  const abs = files.resolveInside(files.filesRoot(store.get(harness)), rel)
+ipcMain.handle('files:open', async (_e, { workspace, rel }) => {
+  const abs = files.resolveInside(files.filesRoot(store.get(workspace)), rel)
   const err = await shell.openPath(abs) // abre no programa padrão do Windows
   if (err) throw new Error(err)
 })
-ipcMain.handle('files:reveal', (_e, { harness, rel }) => {
-  const root = files.filesRoot(store.get(harness))
+ipcMain.handle('files:reveal', (_e, { workspace, rel }) => {
+  const root = files.filesRoot(store.get(workspace))
   const abs = files.resolveInside(root, rel)
   if (rel) shell.showItemInFolder(abs)
   else shell.openPath(root)
 })
 // Exclui arquivo ou pasta da files/: vai para a Lixeira do Windows (dá para recuperar)
-ipcMain.handle('files:delete', async (_e, { harness, rel }) => {
+ipcMain.handle('files:delete', async (_e, { workspace, rel }) => {
   if (!rel) throw new Error('Não é possível excluir a pasta files/ inteira')
-  const abs = files.resolveInside(files.filesRoot(store.get(harness)), rel)
+  const abs = files.resolveInside(files.filesRoot(store.get(workspace)), rel)
   if (!fs.existsSync(abs)) return
   try {
     await shell.trashItem(abs)
@@ -120,52 +120,52 @@ ipcMain.handle('files:delete', async (_e, { harness, rel }) => {
   }
 })
 // Move arquivo/pasta dentro da contexts/
-ipcMain.handle('files:move', (_e, { harness, srcRel, destFolder }) => {
+ipcMain.handle('files:move', (_e, { workspace, srcRel, destFolder }) => {
   if (!srcRel) throw new Error('Nenhum item para mover')
-  return files.moveEntry(store.get(harness), srcRel, destFolder)
+  return files.moveEntry(store.get(workspace), srcRel, destFolder)
 })
 // Renomeia arquivo/pasta dentro da contexts/
-ipcMain.handle('files:rename', (_e, { harness, rel, newName }) => {
+ipcMain.handle('files:rename', (_e, { workspace, rel, newName }) => {
   if (!rel) throw new Error('Nenhum item para renomear')
   try {
-    return files.renameEntry(store.get(harness), rel, newName)
+    return files.renameEntry(store.get(workspace), rel, newName)
   } catch (e) {
     if (e.code) logError('files:rename', e)
     throw e.code === 'EBUSY' || e.code === 'EPERM' ? new Error('O item está aberto em outro programa. Feche-o e tente de novo.') : e
   }
 })
 // Importa arquivo externo para dentro da contexts/
-ipcMain.handle('files:import', (_e, { harness, externalPath, destFolder }) => {
+ipcMain.handle('files:import', (_e, { workspace, externalPath, destFolder }) => {
   if (!externalPath) throw new Error('Nenhum arquivo para importar')
-  return files.importFile(store.get(harness), externalPath, destFolder)
+  return files.importFile(store.get(workspace), externalPath, destFolder)
 })
 // ---------- desenhos ----------
-ipcMain.handle('files:readHarness', (_e, { harness, rel }) => files.readHarnessText(store.get(harness), rel))
-ipcMain.handle('files:read', (_e, { harness, rel }) => files.readText(store.get(harness), rel))
-ipcMain.handle('files:write', (_e, { harness, rel, text }) => files.writeText(store.get(harness), rel, text))
-ipcMain.handle('files:create', (_e, { harness, rel, dir, text }) => {
+ipcMain.handle('files:readWorkspace', (_e, { workspace, rel }) => files.readWorkspaceText(store.get(workspace), rel))
+ipcMain.handle('files:read', (_e, { workspace, rel }) => files.readText(store.get(workspace), rel))
+ipcMain.handle('files:write', (_e, { workspace, rel, text }) => files.writeText(store.get(workspace), rel, text))
+ipcMain.handle('files:create', (_e, { workspace, rel, dir, text }) => {
   try {
-    files.createEntry(store.get(harness), rel, { dir: !!dir, text: typeof text === 'string' ? text : '' })
+    files.createEntry(store.get(workspace), rel, { dir: !!dir, text: typeof text === 'string' ? text : '' })
   } catch (e) {
     if (e.code !== 'EEXIST') logError('files:create', e)
     throw e.code === 'EEXIST' ? new Error(`Já existe "${rel}".`) : e
   }
 })
-ipcMain.handle('files:remove', (_e, { harness, rel }) => {
+ipcMain.handle('files:remove', (_e, { workspace, rel }) => {
   // só remove patches de desenho (consumidos pelo app); o resto usa a Lixeira
   if (!/\.excalidraw\.patch\.json$/i.test(String(rel))) throw new Error('Remoção direta só para patches de desenho')
-  files.removeFile(store.get(harness), rel)
+  files.removeFile(store.get(workspace), rel)
 })
-ipcMain.handle('draw:preview', (_e, { harness, rel, png, summary, suffix }) => {
-  const h = store.get(harness)
+ipcMain.handle('draw:preview', (_e, { workspace, rel, png, summary, suffix }) => {
+  const h = store.get(workspace)
   const out = files.writeDrawPreview(h, rel, { png, summary, suffix })
-  // caminhos relativos à raiz do harness (onde o terminal abre)
+  // caminhos relativos à raiz do workspace (onde o terminal abre)
   const relTo = p => p && path.relative(h.path, p).split(path.sep).join('/')
   return { png: relTo(out.png), summary: relTo(out.summary) }
 })
 // desenhos abertos em cada aba ficam no handoff, para reabrir ao retomar a aba
-ipcMain.handle('session:tabDrawings', async (_e, { harness, sessionId, tabId, drawings }) => {
-  const s = sessions.get(store.get(harness), sessionId)
+ipcMain.handle('session:tabDrawings', async (_e, { workspace, sessionId, tabId, drawings }) => {
+  const s = sessions.get(store.get(workspace), sessionId)
   await sessions.updateHandoff(s.path, data => {
     const t = (data.tabs || []).find(x => x.id === tabId)
     if (t) t.drawings = drawings
@@ -176,7 +176,7 @@ ipcMain.handle('shell:openExternal', (_e, url) => {
   if (!/^(https?:|mailto:)/i.test(String(url))) throw new Error('Link não permitido')
   return shell.openExternal(url)
 })
-ipcMain.handle('files:path', (_e, { harness, rel }) => files.resolveInside(files.filesRoot(store.get(harness)), rel))
+ipcMain.handle('files:path', (_e, { workspace, rel }) => files.resolveInside(files.filesRoot(store.get(workspace)), rel))
 
 ipcMain.handle('dialog:browse-folder', async () => {
   const result = await dialog.showOpenDialog(win, {
@@ -190,18 +190,18 @@ ipcMain.handle('dialog:browse-folder', async () => {
 const openTabs = new Map()
 
 // ---------- prompts iniciais ----------
-function promptFor ({ kind, session, harness }) {
+function promptFor ({ kind, session, workspace }) {
   const where = `A pasta da sessão é ${session.path}`
-  // sessões guardam só memória; arquivos de trabalho ficam na contexts/ do harness
-  const filesRule = `Arquivos de trabalho ficam na pasta contexts/ do harness (${path.join(harness.path, 'contexts')}); antes de criar ou salvar qualquer arquivo use a skill onde-salvar-arquivos e, se eu não tiver dito onde, pergunte em qual pasta gravar. A pasta da sessão guarda só handoff.md, log.md e messages.md. `
+  // sessões guardam só memória; arquivos de trabalho ficam na contexts/ do workspace
+  const filesRule = `Arquivos de trabalho ficam na pasta contexts/ do workspace (${path.join(workspace.path, 'contexts')}); antes de criar ou salvar qualquer arquivo use a skill onde-salvar-arquivos e, se eu não tiver dito onde, pergunte em qual pasta gravar. A pasta da sessão guarda só handoff.md, log.md e messages.md. `
   if (kind === 'new-session') {
-    return `Esta é a sessão '${session.title}' do harness-hub (harness ${harness.title}). ${where}. ` +
+    return `Esta é a sessão '${session.title}' do cli-context-hub (workspace ${workspace.title}). ${where}. ` +
       'Leia handoff.md e log.md dessa pasta antes de começar e mantenha as seções Estado atual, Decisões tomadas e Próximos passos do handoff.md atualizadas. ' +
       filesRule +
       'Por enquanto apenas confirme que leu e aguarde minhas instruções.'
   }
   if (kind === 'join-session') {
-    return `Você está entrando na sessão '${session.title}' do harness-hub, que já está em andamento. ${where}. ` +
+    return `Você está entrando na sessão '${session.title}' do cli-context-hub, que já está em andamento. ${where}. ` +
       'Leia handoff.md e log.md para entender o que já foi feito (inclusive por outros modelos), resuma em poucas linhas e aguarde minhas instruções. ' +
       'Mantenha o handoff.md atualizado conforme trabalharmos. ' + filesRule.trim()
   }
@@ -249,41 +249,41 @@ ipcMain.handle('settings:save', (_e, changes = {}, confirmClose = false) => {
   return { ...result, killed }
 })
 
-ipcMain.handle('harness:list', () => {
+ipcMain.handle('workspace:list', () => {
   const { warnings } = settings.load()
-  return { root: store.root, harnesses: store.list(), settingsWarnings: warnings }
+  return { root: store.root, workspaces: store.list(), settingsWarnings: warnings }
 })
 
-ipcMain.handle('harness:create', (_e, details) => {
+ipcMain.handle('workspace:create', (_e, details) => {
   try {
     return store.create(details || {})
   } catch (e) {
-    logError('harness:create', e)
+    logError('workspace:create', e)
     throw e
   }
 })
 
-ipcMain.handle('harness:getStructure', (_e, harnessName) => {
+ipcMain.handle('workspace:getStructure', (_e, workspaceName) => {
   try {
-    const harness = store.get(harnessName)
-    return buildFolderTree(harness.path)
+    const workspace = store.get(workspaceName)
+    return buildFolderTree(workspace.path)
   } catch (e) {
-    logError('harness:getStructure', e)
+    logError('workspace:getStructure', e)
     throw e
   }
 })
 
-ipcMain.handle('harness:setWorkdir', (_e, { harness: harnessName, workdir }) => {
+ipcMain.handle('workspace:setWorkdir', (_e, { workspace: workspaceName, workdir }) => {
   try {
-    const harness = store.get(harnessName)
-    const yamlFile = path.join(harness.path, 'harness.yaml')
+    const workspace = store.get(workspaceName)
+    const yamlFile = path.join(workspace.path, 'workspace.yaml')
     let yaml = fs.readFileSync(yamlFile, 'utf8')
     const value = workdir ? workdir.replace(/\\/g, '/') : 'null'
     yaml = yaml.replace(/^workdir:.*$/m, `workdir: ${value}`)
     fs.writeFileSync(yamlFile, yaml, 'utf8')
-    return store.get(harnessName)
+    return store.get(workspaceName)
   } catch (e) {
-    logError('harness:setWorkdir', e)
+    logError('workspace:setWorkdir', e)
     throw e
   }
 })
@@ -292,7 +292,7 @@ function buildFolderTree(root, maxDepth = 8, currentDepth = 0) {
   if (currentDepth >= maxDepth) return { name: path.basename(root), path: root, children: [], type: 'dir' }
 
   const children = []
-  const showFiles = currentDepth >= 1 // nível 0 = raiz do harness (sem arquivos soltos), nível 1+ = mostra tudo
+  const showFiles = currentDepth >= 1 // nível 0 = raiz do workspace (sem arquivos soltos), nível 1+ = mostra tudo
   try {
     for (const d of fs.readdirSync(root, { withFileTypes: true })) {
       if (d.isDirectory() && !/^[._~]/.test(d.name) && d.name !== 'node_modules') {
@@ -344,7 +344,7 @@ ipcMain.handle('miniapp:open', (_e, name) => {
     minHeight: 480,
     skipTaskbar: false,
     frame: false,
-    title: `${miniapp.title} · harness-hub`,
+    title: `${miniapp.title} · CLI Context Hub`,
     backgroundColor: '#0d0e11',
     webPreferences: {
       contextIsolation: true,
@@ -384,13 +384,13 @@ ipcMain.handle('miniapp-window:isMaximized', (e) => BrowserWindow.fromWebContent
 ipcMain.handle('miniapp-window:toggleFullscreen', (e) => { const w = BrowserWindow.fromWebContents(e.sender); if (w) w.setFullScreen(!w.isFullScreen()); return w?.isFullScreen() ?? false })
 ipcMain.handle('miniapp-window:isFullscreen', (e) => BrowserWindow.fromWebContents(e.sender)?.isFullScreen() ?? false)
 
-ipcMain.handle('session:list', (_e, harnessName) => sessions.list(store.get(harnessName)))
+ipcMain.handle('session:list', (_e, workspaceName) => sessions.list(store.get(workspaceName)))
 
 /**
  * Abre um terminal para uma sessão.
- * - { harness, newSession: { title }, engine }       -> cria sessão + aba
- * - { harness, sessionId, engine }                   -> nova aba numa sessão existente
- * - { harness, sessionId, tabId }                    -> retoma uma aba existente
+ * - { workspace, newSession: { title }, engine }       -> cria sessão + aba
+ * - { workspace, sessionId, engine }                   -> nova aba numa sessão existente
+ * - { workspace, sessionId, tabId }                    -> retoma uma aba existente
  */
 ipcMain.handle('session:open', async (_e, req) => {
   try {
@@ -402,12 +402,12 @@ ipcMain.handle('session:open', async (_e, req) => {
 })
 
 async function openSession (req) {
-  const harness = store.get(req.harness)
+  const workspace = store.get(req.workspace)
 
   // 1) verifica tudo ANTES de criar sessão ou aba (evita sessões vazias quando algo falha)
   let engine = req.engine
   if (req.tabId) {
-    const existing = sessions.get(harness, req.sessionId).tabs.find(t => t.id === req.tabId)
+    const existing = sessions.get(workspace, req.sessionId).tabs.find(t => t.id === req.tabId)
     if (!existing) throw new Error(`Aba não encontrada: ${req.tabId}`)
     engine = existing.engine
     if (!canResume(engine)) throw new Error(`O ${getEngine(engine).label} não retoma sessões. Abra uma nova aba.`)
@@ -415,11 +415,11 @@ async function openSession (req) {
   if (!enabledEngines(settings.get()).includes(engine)) {
     throw new Error(`Motor ${engine} desativado. Ative-o nas Configurações.`)
   }
-  if (!harness.engines.supported.includes(engine)) {
-    throw new Error(`Motor ${engine} não suportado por este harness`)
+  if (!workspace.engines.supported.includes(engine)) {
+    throw new Error(`Motor ${engine} não suportado por este workspace`)
   }
   const check = preflight(engine, settings.get().terminal.shell)
-  try { syncHarness(harness.path, engine) } catch (error) {
+  try { syncWorkspace(workspace.path, engine) } catch (error) {
     logError('sync', error)
     throw error
   }
@@ -431,10 +431,10 @@ async function openSession (req) {
   let kind
 
   if (req.newSession) {
-    session = await sessions.create(harness, req.newSession)
+    session = await sessions.create(workspace, req.newSession)
     kind = 'new-session'
   } else {
-    session = sessions.get(harness, req.sessionId)
+    session = sessions.get(workspace, req.sessionId)
   }
 
   if (req.tabId) {
@@ -445,31 +445,31 @@ async function openSession (req) {
     resume = true
     kind = before && before !== tab.id ? 'resume-after-others' : null
   } else {
-    if (!harness.engines.supported.includes(req.engine)) throw new Error(`Motor ${req.engine} não suportado por este harness`)
-    const sessionWorkdir = session.workdir || harness.workdir
+    if (!workspace.engines.supported.includes(req.engine)) throw new Error(`Motor ${req.engine} não suportado por este workspace`)
+    const sessionWorkdir = session.workdir || workspace.workdir
     tab = await sessions.addTab(session.path, { engine: req.engine, workdir: sessionWorkdir })
     kind = kind || 'join-session'
   }
 
-  filesWatcher.watch(harness) // desenhos criados pela IA abrem sozinhos como subaba
+  filesWatcher.watch(workspace) // desenhos criados pela IA abrem sozinhos como subaba
 
 
-  const cwd = fs.existsSync(tab.workdir) ? tab.workdir : harness.workdir
-  const engineCfg = harness[tab.engine] || {}
-  // Se o terminal abre dentro do harness, ele já enxerga tudo (sessão e files/).
-  // Se abre num projeto externo (workdir definido), damos acesso extra à pasta do harness.
+  const cwd = fs.existsSync(tab.workdir) ? tab.workdir : workspace.workdir
+  const engineCfg = workspace[tab.engine] || {}
+  // Se o terminal abre dentro do workspace, ele já enxerga tudo (sessão e files/).
+  // Se abre num projeto externo (workdir definido), damos acesso extra à pasta do workspace.
   const inside = (d, root) => { const r = path.relative(root, d); return r === '' || (!r.startsWith('..') && !path.isAbsolute(r)) }
-  const addDirs = inside(cwd, harness.path) ? [] : [harness.path]
+  const addDirs = inside(cwd, workspace.path) ? [] : [workspace.path]
 
   const engineArgs = buildEngineArgs({
     engine: tab.engine,
     sessionId: tab.session_id,
     resume,
-    name: `${harness.title} · ${session.title} · ${tab.id}`,
+    name: `${workspace.title} · ${session.title} · ${tab.id}`,
     addDirs,
     prompt: tab.engine === 'gemini' && kind
-      ? `${promptFor({ kind, session, harness })} Leia também as instruções em ${path.join(harness.path, 'AGENTS.md')} e as skills em ${path.join(harness.path, 'skills')}.`
-      : promptFor({ kind, session, harness }),
+      ? `${promptFor({ kind, session, workspace })} Leia também as instruções em ${path.join(workspace.path, 'AGENTS.md')} e as skills em ${path.join(workspace.path, 'skills')}.`
+      : promptFor({ kind, session, workspace }),
     model: engineCfg.model || null,
     extraArgs: [
       ...(tab.engine === 'claude' ? ['--settings', claudeSettingsFile()] : []),
@@ -489,15 +489,15 @@ async function openSession (req) {
     engineArgs,
     // variáveis para os futuros hooks saberem a qual sessão/aba pertencem
     env: {
-      ...(harness.env || {}),
+      ...(workspace.env || {}),
       ...engineEnvironment(tab.engine),
       ...browserCdpEnvironment(BROWSER_CDP_PORT),
-      HARNESS_HUB_HARNESS: harness.name,
-      HARNESS_HUB_SESSION_DIR: session.path,
-      HARNESS_HUB_TAB: tab.id,
-      HARNESS_HUB_ENGINE: tab.engine
+      CCH_WORKSPACE: workspace.name,
+      CCH_SESSION_DIR: session.path,
+      CCH_TAB: tab.id,
+      CCH_ENGINE: tab.engine
     },
-    meta: { harness: harness.name, session: session.id, tab: tab.id }
+    meta: { workspace: workspace.name, session: session.id, tab: tab.id }
   })
   } catch (e) {
     await sessions.appendLog(session.path, { tab: tab.id, engine: tab.engine, text: `Falha ao abrir o terminal: ${e.message}` })
@@ -509,17 +509,17 @@ async function openSession (req) {
   return {
     termId: term.id,
     command: term.command,
-    harness: { name: harness.name, title: harness.title },
-    session: sessions.get(harness, session.id),
+    workspace: { name: workspace.name, title: workspace.title },
+    session: sessions.get(workspace, session.id),
     tab
   }
 }
 
 // Exclui uma sessão: fecha os terminais abertos dela e apaga a pasta
-ipcMain.handle('session:delete', async (_e, { harness: harnessName, sessionId }) => {
+ipcMain.handle('session:delete', async (_e, { workspace: workspaceName, sessionId }) => {
   try {
-    const harness = store.get(harnessName)
-    const session = sessions.get(harness, sessionId)
+    const workspace = store.get(workspaceName)
+    const session = sessions.get(workspace, sessionId)
     const killed = []
     for (const [key, termId] of openTabs) {
       if (key.startsWith(session.path + '#')) {
@@ -530,7 +530,7 @@ ipcMain.handle('session:delete', async (_e, { harness: harnessName, sessionId })
     }
     // dá um instante para o Windows liberar os arquivos usados pelos processos encerrados
     if (killed.length) await new Promise(r => setTimeout(r, 500))
-    await sessions.remove(harness, sessionId)
+    await sessions.remove(workspace, sessionId)
     return { killed }
   } catch (e) {
     logError('session:delete', e)
@@ -550,7 +550,7 @@ function createWindow () {
     minWidth: 820,
     minHeight: 520,
     backgroundColor: '#0d0e11',
-    title: 'harness-hub',
+    title: 'CLI Context Hub',
     frame: false,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload.js')
@@ -681,7 +681,7 @@ function insetsToRect (insets) {
 }
 
 function initBrowser () {
-  browserSession = electronSession.fromPartition('persist:harness-browser')
+  browserSession = electronSession.fromPartition('persist:workspace-browser')
 
   ipcMain.handle('browser:new-tab', (_e, url) => {
     const id = makeBrowserTab(url || 'https://www.google.com')
@@ -771,8 +771,8 @@ function initBrowser () {
     return t ? t.view.webContents : null
   }
 
-  ipcMain.handle('automation:list', (_e, { harness }) => {
-    const h = store.get(harness)
+  ipcMain.handle('automation:list', (_e, { workspace }) => {
+    const h = store.get(workspace)
     return files.listDir(h, AUTOMATION_DIR).entries.filter(e => e.type === 'file' && e.name.endsWith('.json')).map(e => {
       try {
         const r = JSON.parse(files.readText(h, e.rel))
@@ -781,11 +781,11 @@ function initBrowser () {
     })
   })
 
-  ipcMain.handle('automation:run', async (_e, { harness, rel }) => {
+  ipcMain.handle('automation:run', async (_e, { workspace, rel }) => {
     if (automationRun) throw new Error('Já existe uma automação em execução.')
     const wc = activeBrowserContents()
     if (!wc) throw new Error('Abra uma aba no navegador antes de executar.')
-    const h = store.get(harness)
+    const h = store.get(workspace)
     const recipe = JSON.parse(files.readText(h, rel))
     const run = { cancelled: false }
     automationRun = run
@@ -818,14 +818,14 @@ function initBrowser () {
     automationState({ recording: true })
   })
 
-  ipcMain.handle('automation:record-stop', (_e, { harness, name }) => {
+  ipcMain.handle('automation:record-stop', (_e, { workspace, name }) => {
     if (!recorder) throw new Error('Nenhuma gravação em andamento.')
     const steps = recorder.stop()
     recorder = null
     automationState({ recording: false })
     const slug = String(name || 'automacao').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'automacao'
     const rel = `${AUTOMATION_DIR}/${slug}.json`
-    files.createEntry(store.get(harness), rel, { text: JSON.stringify({ name: name || slug, description: 'Gravada no navegador. Edite os passos (ex.: adicione "wait" e "extract").', vars: {}, steps }, null, 2) })
+    files.createEntry(store.get(workspace), rel, { text: JSON.stringify({ name: name || slug, description: 'Gravada no navegador. Edite os passos (ex.: adicione "wait" e "extract").', vars: {}, steps }, null, 2) })
     return rel
   })
 

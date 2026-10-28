@@ -1,8 +1,8 @@
 // Editor de páginas em blocos, no estilo do Notion. Tudo fica salvo no IndexedDB deste miniapp.
-// Banco próprio (não o "harnesshub-miniapps" do todo-list): miniapps dividem a mesma origem file://.
-const DB_NAME = 'harnesshub-paginas'
+// Banco próprio (não o "cch-miniapps" do todo-list): miniapps dividem a mesma origem file://.
+const DB_NAME = 'cch-paginas'
 const STORE = 'pages'
-const UI_KEY = 'harnesshub.paginas.ui'
+const UI_KEY = 'cch.paginas.ui'
 
 const TYPES = [
   { type: 'p', icon: 'T', label: 'Texto', hint: 'Parágrafo simples', keys: 'texto paragrafo text' },

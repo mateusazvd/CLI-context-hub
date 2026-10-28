@@ -1,16 +1,16 @@
 # To-do list
 
-Miniapp global do HarnessHub para tarefas independentes de harnesses e
+Miniapp global do CLI Context Hub para tarefas independentes de workspaces e
 sessões. A tela agrupa tarefas por dia e oferece prioridade, etiquetas, prazo,
 recorrência, busca e filtros.
 
 ## Execução atual
 
 Abra `index.html` em um ambiente Electron ou navegador moderno. Os dados ficam
-no IndexedDB local da aplicação, no banco `harnesshub-miniapps`, store `tasks`.
+no IndexedDB local da aplicação, no banco `cch-miniapps`, store `tasks`.
 
 O manifesto está em `miniapp.yaml`. A integração com o catálogo e a janela de
-miniapps do HarnessHub ainda depende do host principal registrar e abrir o
+miniapps do CLI Context Hub ainda depende do host principal registrar e abrir o
 ponto de entrada.
 
 ## Funcionalidades

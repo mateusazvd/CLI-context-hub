@@ -48,7 +48,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const titlebar = document.createElement('header')
   titlebar.id = 'miniapp-titlebar'
   titlebar.innerHTML = `
-    <div class="mtb-drag"><span class="mtb-title">${title} · harness-hub</span></div>
+    <div class="mtb-drag"><span class="mtb-title">${title} · CLI Context Hub</span></div>
     <div class="mtb-controls">
       <button class="mtb-btn" id="mtb-min" title="Minimizar">${svgMin}</button>
       <button class="mtb-btn" id="mtb-max" title="Maximizar">${svgMax}</button>

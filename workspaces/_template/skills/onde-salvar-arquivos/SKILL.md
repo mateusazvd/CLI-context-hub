@@ -1,13 +1,13 @@
 ---
 name: onde-salvar-arquivos
-description: Use SEMPRE antes de criar, salvar, gerar, exportar ou mover qualquer arquivo ou pasta (código, documento, planilha, imagem, dados, anotação). Define que os arquivos ficam dentro da pasta files/ do harness e como perguntar ao usuário em qual pasta gravar.
+description: Use SEMPRE antes de criar, salvar, gerar, exportar ou mover qualquer arquivo ou pasta (código, documento, planilha, imagem, dados, anotação). Define que os arquivos ficam dentro da pasta files/ do workspace e como perguntar ao usuário em qual pasta gravar.
 ---
 
 # Onde salvar arquivos
 
-Todo arquivo de trabalho deste harness mora em **`files/`**, dentro da pasta do harness (o terminal
-abre na raiz do harness, então o caminho relativo é `files/...`). Essa pasta é compartilhada por todas
-as sessões e aparece no explorador do harness-hub.
+Todo arquivo de trabalho deste workspace mora em **`files/`**, dentro da pasta do workspace (o terminal
+abre na raiz do workspace, então o caminho relativo é `files/...`). Essa pasta é compartilhada por todas
+as sessões e aparece no explorador do cli-context-hub.
 
 ## Antes de criar um arquivo
 
@@ -23,9 +23,9 @@ as sessões e aparece no explorador do harness-hub.
 
 ## Nunca
 
-- Nunca salve fora da pasta do harness, a não ser que o usuário dê um caminho explícito para isso.
+- Nunca salve fora da pasta do workspace, a não ser que o usuário dê um caminho explícito para isso.
 - Nunca salve arquivos de trabalho em `sessions/` (lá ficam só `handoff.md`, `log.md` e `messages.md`)
-  nem nas pastas de configuração do harness: `skills/`, `agents/`, `commands/`, `mcp/`, `.claude/`, `.github/`.
+  nem nas pastas de configuração do workspace: `skills/`, `agents/`, `commands/`, `mcp/`, `.claude/`, `.github/`.
 - Nunca sobrescreva um arquivo existente sem avisar; se o nome já existir, pergunte ou sugira outro nome.
 
 ## Depois de salvar

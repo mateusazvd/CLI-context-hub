@@ -1,4 +1,4 @@
-// Visualizador de SVG do harness-hub.
+// Visualizador de SVG do cli-context-hub.
 // Renderiza o SVG sanitizado com pan e zoom via mouse/scroll.
 import DOMPurify from 'dompurify'
 

@@ -8,20 +8,20 @@ const { getEngine, buildEngineArgs, engineEnvironment } = require('./engines')
 const isWin = process.platform === 'win32'
 const DEFAULT_BROWSER_CDP_PORT = '9222'
 
-function browserCdpEnvironment (configuredPort = process.env.HARNESS_HUB_BROWSER_CDP_PORT) {
+function browserCdpEnvironment (configuredPort = process.env.CCH_BROWSER_CDP_PORT) {
   const port = String(configuredPort || DEFAULT_BROWSER_CDP_PORT).trim()
   if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535) {
     throw new Error(`Porta CDP inválida: "${port}". Use um número entre 1 e 65535.`)
   }
   return {
-    HARNESS_HUB_BROWSER_CDP_URL: `http://127.0.0.1:${port}`,
-    HARNESS_HUB_BROWSER_CDP_PORT: port
+    CCH_BROWSER_CDP_URL: `http://127.0.0.1:${port}`,
+    CCH_BROWSER_CDP_PORT: port
   }
 }
 
-// Prioridade: variável HARNESS_HUB_SHELL > settings.terminal.shell > padrão do sistema
+// Prioridade: variável CCH_SHELL > settings.terminal.shell > padrão do sistema
 function defaultShell (configured) {
-  const custom = process.env.HARNESS_HUB_SHELL || configured
+  const custom = process.env.CCH_SHELL || configured
   // PowerShell bloqueado não pode ser usado nem por configuração explícita.
   // No Windows, cai para CMD para manter o terminal funcional.
   if (custom && !(isWin && guessKind(custom) === 'powershell')) {
@@ -84,7 +84,7 @@ function preflight (engine, configuredShell) {
   const bin = spec.command
   const cli = findCli(bin)
   if (!cli) {
-    throw new Error(`O comando "${bin}" não foi encontrado no PATH. Instale com: ${spec.install} (depois feche e abra o harness-hub).`)
+    throw new Error(`O comando "${bin}" não foi encontrado no PATH. Instale com: ${spec.install} (depois feche e abra o cli-context-hub).`)
   }
   const shell = defaultShell(configuredShell)
   const shellIsPath = /[\\/]/.test(shell.file)
@@ -128,7 +128,7 @@ function createTerminalManager ({ onData, onExit, getSettings = () => ({}) }) {
       cols: 120,
       rows: 30,
       cwd: cwd || os.homedir(),
-      env: { ...process.env, ...env, HARNESS_HUB: '1' }
+      env: { ...process.env, ...env, WORKSPACE_HUB: '1' }
       })
     } catch (e) {
       throw new Error(`Falha ao abrir o terminal (${shell.file}): ${e.message}`)

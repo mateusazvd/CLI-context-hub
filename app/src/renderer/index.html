@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: file:; worker-src 'self' blob: https://cdnjs.cloudflare.com; connect-src 'self' data: blob: file:" />
-    <title>harness-hub</title>
+    <title>CLI Context Hub</title>
     <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css" />
     <link rel="stylesheet" href="./draw/dist/draw.css" />
     <link rel="stylesheet" href="./styles.css" />
@@ -13,7 +13,7 @@
     <!-- TITLEBAR CUSTOMIZADA -->
     <header id="titlebar">
       <div class="tb-drag">
-        <span class="tb-title">harness-hub</span>
+        <span class="tb-title">CLI Context Hub</span>
       </div>
       <div class="tb-controls">
         <button id="tb-min" class="tb-btn" title="Minimizar">
@@ -33,13 +33,13 @@
       <aside id="sidebar">
         <div class="side-head">
           <button id="btn-toggle" class="icon-btn" title="Recolher/expandir menu">☰</button>
-          <span class="brand">harness-hub</span>
-          <button id="btn-new-harness" class="icon-btn" title="Criar novo harness">＋</button>
+          <span class="brand">CLI Context Hub</span>
+          <button id="btn-new-workspace" class="icon-btn" title="Criar novo workspace">＋</button>
           <button id="btn-pin" class="icon-btn pin" title="Fixar menu aberto">📌</button>
         </div>
 
-        <div class="side-section-title">Harness</div>
-        <nav id="harness-list"></nav>
+        <div class="side-section-title">Workspace</div>
+        <nav id="workspace-list"></nav>
 
         <section id="usage" class="usage" aria-label="Uso dos modelos">
           <div class="usage-head">
@@ -55,7 +55,7 @@
             <span class="h-avatar gear">⚙</span>
             <span class="h-text"><span class="h-title">Configurações</span></span>
           </button>
-          <div class="side-foot" id="harness-root" title=""></div>
+          <div class="side-foot" id="workspace-root" title=""></div>
         </div>
       </aside>
 
@@ -89,14 +89,14 @@
           <button id="btn-explorer" class="icon-btn" title="Mostrar/ocultar arquivos">🗂</button>
         </div>
 
-        <div id="workspace">
+        <div id="main-area">
         <div id="stage">
           <!-- estado vazio -->
           <section id="view-empty" class="view">
             <div class="empty">
               <div class="empty-icon">⌘</div>
-              <h2>Selecione um harness</h2>
-              <p>Escolha um harness no menu para iniciar uma sessão ou retomar uma anterior.</p>
+              <h2>Selecione um workspace</h2>
+              <p>Escolha um workspace no menu para iniciar uma sessão ou retomar uma anterior.</p>
             </div>
           </section>
 
@@ -109,9 +109,9 @@
                 <p id="launcher-warn" class="warn hidden"></p>
                 <div class="workdir-default-row">
                   <label class="workdir-label">Diretorio padrão:</label>
-                  <input id="harness-workdir" type="text" placeholder="Pasta do harness (raiz)" readonly />
-                  <button id="btn-browse-harness-workdir" class="icon-btn" title="Alterar pasta padrão">📁</button>
-                  <button id="btn-clear-harness-workdir" class="icon-btn" title="Usar pasta do harness (raiz)">✕</button>
+                  <input id="workspace-workdir" type="text" placeholder="Pasta do workspace (raiz)" readonly />
+                  <button id="btn-browse-workspace-workdir" class="icon-btn" title="Alterar pasta padrão">📁</button>
+                  <button id="btn-clear-workspace-workdir" class="icon-btn" title="Usar pasta do workspace (raiz)">✕</button>
                 </div>
               </header>
 
@@ -119,7 +119,7 @@
                 <h3>Nova sessão</h3>
                 <input id="new-title" type="text" placeholder="Nome da sessão (ex: login com JWT)" maxlength="80" />
                 <div class="workdir-row">
-                  <input id="new-workdir" type="text" placeholder="Pasta do projeto (padrão: pasta do harness)" />
+                  <input id="new-workdir" type="text" placeholder="Pasta do projeto (padrão: pasta do workspace)" />
                   <button id="btn-browse-workdir" class="icon-btn" title="Procurar pasta">📁</button>
                 </div>
                 <div class="engines" id="new-engines"></div>
@@ -147,7 +147,7 @@
               </div>
               <div class="block">
                 <h3>Motor padrão</h3>
-                <p class="hint">Usado ao iniciar sessões nos harnesses que não definem um motor próprio no <code>harness.yaml</code>.</p>
+                <p class="hint">Usado ao iniciar sessões nos workspaces que não definem um motor próprio no <code>workspace.yaml</code>.</p>
                 <div class="engines" id="settings-engines" role="radiogroup" aria-label="Motor padrão"></div>
                 <p class="hint" id="settings-overrides"></p>
               </div>
@@ -169,8 +169,8 @@
           <section id="view-terms" class="view hidden"></section>
         </div>
 
-        <!-- explorador: pasta files/ do harness da aba ativa -->
-        <aside id="explorer" class="hidden" aria-label="Arquivos do harness">
+        <!-- explorador: pasta files/ do workspace da aba ativa -->
+        <aside id="explorer" class="hidden" aria-label="Arquivos do workspace">
           <div id="explorer-resize" title="Arraste para redimensionar"></div>
           <div class="ex-head">
             <span class="ex-title">Arquivos</span>
@@ -187,8 +187,8 @@
           </div>
           <button id="ex-root" class="ex-root" title="Abrir pasta no Explorer"></button>
           <div id="ex-tree" role="tree"></div>
-          <!-- estrutura 3D das pastas do harness -->
-          <section id="graph3d-panel" class="graph3d-panel" aria-label="Estrutura 3D do harness">
+          <!-- estrutura 3D das pastas do workspace -->
+          <section id="graph3d-panel" class="graph3d-panel" aria-label="Estrutura 3D do workspace">
             <div class="graph3d-head">
               <span class="graph3d-title">Estrutura</span>
               <button id="graph3d-reload" class="icon-btn small" title="Recarregar estrutura">⟳</button>
@@ -249,7 +249,7 @@
     <script type="module" src="./draw/dist/mathnote.js"></script>
     <script type="module" src="./draw/dist/pdf.js"></script>
     <script src="./draw/dist/json.js"></script>
-    <script src="./harness-graph.js"></script>
+    <script src="./workspace-graph.js"></script>
     <script src="./graph3d.js"></script>
     <script src="./app.js"></script>
   </body>

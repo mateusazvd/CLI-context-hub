@@ -1,4 +1,4 @@
-// Configurações do programa: lidas de harness-hub/settings.yaml.
+// Configurações do programa: lidas de cli-context-hub/settings.yaml.
 // O arquivo é criado com os valores padrão na primeira execução.
 // É relido a cada uso, então mudanças valem sem reiniciar o app (exceto onde indicado).
 const fs = require('node:fs')
@@ -22,7 +22,7 @@ const DEFAULTS = {
   }
 }
 
-const TEMPLATE = `# Configurações do harness-hub
+const TEMPLATE = `# Configurações do cli-context-hub
 # Edite pela tela de Configurações do app (⚙) ou direto neste arquivo.
 
 # CLIs disponíveis e padrão global

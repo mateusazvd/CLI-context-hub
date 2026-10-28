@@ -1,7 +1,7 @@
-# Identidade do harness
-name: nome-do-harness            # kebab-case, igual ao nome da pasta
+# Identidade do workspace
+name: nome-do-workspace            # kebab-case, igual ao nome da pasta
 title: Nome Amigável
-description: Uma frase sobre para que este harness serve.
+description: Uma frase sobre para que este workspace serve.
 version: 0.1.0
 
 # Motores (CLIs) suportados
@@ -10,7 +10,7 @@ engines:
   supported: null                # null = todos os CLIs cadastrados; ativação nas Configurações
 
 # Pasta onde o terminal abre.
-# null = raiz deste harness (os CLIs leem AGENTS.md e as skills; arquivos vão para files/).
+# null = raiz deste workspace (os CLIs leem AGENTS.md e as skills; arquivos vão para files/).
 # Para um projeto real use o caminho absoluto, ex: C:/dev/meu-projeto
 workdir: null
 

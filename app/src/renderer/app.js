@@ -38,9 +38,9 @@ async function refreshEngines () {
 const activeEngines = () => Object.keys(ENGINE).filter(id => ENGINE[id].enabled)
 
 const state = {
-  harnesses: [],
+  workspaces: [],
   miniapps: [],
-  selected: null,          // nome do harness selecionado
+  selected: null,          // nome do workspace selecionado
   sessions: [],
   tabs: new Map(),         // termId -> aba
   activeTab: null,
@@ -88,7 +88,7 @@ function showView (name) {
   for (const v of ['empty', 'launcher', 'settings', 'terms']) $(`#view-${v}`).classList.toggle('hidden', v !== name)
   $('#btn-settings').classList.toggle('active', name === 'settings')
   if (name === 'settings') document.querySelectorAll('.h-item.active:not(.settings-btn)').forEach(b => b.classList.remove('active'))
-  else renderHarnessList()
+  else renderWorkspaceList()
   if (name === 'terms') fitActive()
   if (typeof applyExplorerLayout === 'function') applyExplorerLayout()
 }
@@ -110,17 +110,17 @@ const sidebar = {
   autoCollapse () { if (!this.pinned) { this.collapsed = true; this.apply() } }
 }
 
-async function createHarnessDialog () {
-  const name = el('input', { className: 'modal-input', placeholder: 'nome-do-harness', maxlength: 50 })
+async function createWorkspaceDialog () {
+  const name = el('input', { className: 'modal-input', placeholder: 'nome-do-workspace', maxlength: 50 })
   const title = el('input', { className: 'modal-input', placeholder: 'Nome amigável', maxlength: 80 })
-  const description = el('textarea', { className: 'modal-input modal-textarea', placeholder: 'Para que este harness serve?', maxlength: 240 })
+  const description = el('textarea', { className: 'modal-input modal-textarea', placeholder: 'Para que este workspace serve?', maxlength: 240 })
   const ok = await confirmDialog({
-    title: 'Criar novo harness',
-    confirmLabel: 'Criar harness',
+    title: 'Criar novo workspace',
+    confirmLabel: 'Criar workspace',
     cancelLabel: 'Cancelar',
     danger: false,
     body: [
-      el('p', {}, 'O novo harness será criado a partir do template padrão, incluindo AGENTS.md, skills, agentes, comandos, MCP, contexts e sessões.'),
+      el('p', {}, 'O novo workspace será criado a partir do template padrão, incluindo AGENTS.md, skills, agentes, comandos, MCP, contexts e sessões.'),
       el('label', { className: 'modal-field' }, el('span', {}, 'Nome da pasta'), name),
       el('label', { className: 'modal-field' }, el('span', {}, 'Título'), title),
       el('label', { className: 'modal-field' }, el('span', {}, 'Descrição'), description)
@@ -128,39 +128,39 @@ async function createHarnessDialog () {
   })
   if (!ok) return
   if (!name.value.trim() || !title.value.trim()) {
-    toast('Informe o nome da pasta e o título do harness.')
+    toast('Informe o nome da pasta e o título do workspace.')
     return
   }
   try {
-    const created = await window.hub.createHarness({
+    const created = await window.hub.createWorkspace({
       name: name.value,
       title: title.value,
       description: description.value
     })
-    await refreshHarnesses()
-    renderHarnessList()
-    await selectHarness(created.name)
-    toast(`Harness "${created.title}" criado`, 'ok')
+    await refreshWorkspaces()
+    renderWorkspaceList()
+    await selectWorkspace(created.name)
+    toast(`Workspace "${created.title}" criado`, 'ok')
   } catch (e) {
     toast(cleanError(e))
   }
 }
 
-function renderHarnessList () {
-  const nav = $('#harness-list')
+function renderWorkspaceList () {
+  const nav = $('#workspace-list')
   nav.replaceChildren()
-  if (!state.harnesses.length) {
-    nav.append(el('div', { className: 's-empty', style: 'padding:8px' }, 'Nenhum harness encontrado.'))
+  if (!state.workspaces.length) {
+    nav.append(el('div', { className: 's-empty', style: 'padding:8px' }, 'Nenhum workspace encontrado.'))
     return
   }
 
-  for (const h of state.harnesses) {
+  for (const h of state.workspaces) {
     const b = el('button', { className: 'h-item' + (h.name === state.selected ? ' active' : ''), title: h.title },
       el('span', { className: 'h-avatar' }, initials(h.title)),
       el('span', { className: 'h-text' },
         el('span', { className: 'h-title' }, h.title),
         el('span', { className: 'h-sub' }, h.name)))
-    b.onclick = () => selectHarness(h.name)
+    b.onclick = () => selectWorkspace(h.name)
     nav.append(b)
   }
 }
@@ -223,31 +223,31 @@ function closeMiniappCatalog () {
 }
 
 // ---------- launcher ----------
-async function refreshHarnesses () {
+async function refreshWorkspaces () {
   try {
-    const [data] = await Promise.all([window.hub.listHarnesses(), refreshEngines()])
-    state.harnesses = data.harnesses
+    const [data] = await Promise.all([window.hub.listWorkspaces(), refreshEngines()])
+    state.workspaces = data.workspaces
   } catch (error) { toast(cleanError(error)) }
 }
 
-async function selectHarness (name) {
-  await refreshHarnesses()
+async function selectWorkspace (name) {
+  await refreshWorkspaces()
   state.selected = name
-  store.set('harness.selected', name)
-  renderHarnessList()
+  store.set('workspace.selected', name)
+  renderWorkspaceList()
   await renderLauncher()
   showView('launcher')
   $('#new-title').focus()
 }
 
 async function renderLauncher () {
-  const h = state.harnesses.find(x => x.name === state.selected)
+  const h = state.workspaces.find(x => x.name === state.selected)
   if (!h) return
   $('#launcher-title').textContent = h.title
   $('#launcher-desc').textContent = h.description || ''
   $('#launcher-warn').textContent = h.workdirWarning || ''
   $('#launcher-warn').classList.toggle('hidden', !h.workdirWarning)
-  $('#harness-workdir').value = h.workdir || h.path
+  $('#workspace-workdir').value = h.workdir || h.path
 
   // cartões de motor
   const box = $('#new-engines')
@@ -258,14 +258,14 @@ async function renderLauncher () {
       el('span', { className: 'e-name' },
         engineIcon(engine), ENGINE[engine].label,
         h.engines.default === engine
-          ? el('span', { className: 'e-default', title: h.engines.defaultFrom === 'harness' ? 'Definido no harness.yaml' : 'Definido em settings.yaml' }, 'padrão')
+          ? el('span', { className: 'e-default', title: h.engines.defaultFrom === 'workspace' ? 'Definido no workspace.yaml' : 'Definido em settings.yaml' }, 'padrão')
           : null),
-      el('span', { className: 'e-sub' }, supported ? `Iniciar nova sessão com o ${ENGINE[engine].sub}` : 'Não suportado por este harness'))
-    card.onclick = () => openSession({ harness: h.name, newSession: { title: $('#new-title').value, workdir: $('#new-workdir').value.trim() || null }, engine })
+      el('span', { className: 'e-sub' }, supported ? `Iniciar nova sessão com o ${ENGINE[engine].sub}` : 'Não suportado por este workspace'))
+    card.onclick = () => openSession({ workspace: h.name, newSession: { title: $('#new-title').value, workdir: $('#new-workdir').value.trim() || null }, engine })
     box.append(card)
   }
   if (!h.engines.supported.length) {
-    box.append(el('p', { className: 'hint' }, 'Nenhum CLI ativo é suportado por este harness. Ajuste as Configurações ou engines.supported no harness.yaml.'))
+    box.append(el('p', { className: 'hint' }, 'Nenhum CLI ativo é suportado por este workspace. Ajuste as Configurações ou engines.supported no workspace.yaml.'))
   }
 
   // sessões anteriores
@@ -311,11 +311,11 @@ function sessionCard (h, s) {
       ? latestByEngine.map(t => {
           const supported = h.engines.supported.includes(t.engine)
           const b = el('button', { className: 'btn', disabled: !supported,
-            title: supported ? `session_id ${t.session_id}\n${t.workdir}` : 'CLI desativado ou não suportado pelo harness' },
+            title: supported ? `session_id ${t.session_id}\n${t.workdir}` : 'CLI desativado ou não suportado pelo workspace' },
             engineIcon(t.engine),
             `Retomar ${ENGINE[t.engine]?.label || t.engine}`,
             el('span', { className: 's-meta' }, relTime(t.last_used)))
-          b.onclick = () => openSession({ harness: h.name, sessionId: s.id, tabId: t.id })
+          b.onclick = () => openSession({ workspace: h.name, sessionId: s.id, tabId: t.id })
           return b
         })
       : el('span', { className: 's-meta' }, s.tabs.length ? 'Nenhuma aba para retomar.' : 'Nenhuma aba ainda.'))
@@ -323,7 +323,7 @@ function sessionCard (h, s) {
   const newRow = el('div', { className: 's-actions' },
     h.engines.supported.map(engine => {
       const b = el('button', { className: 'btn ghost' }, engineIcon(engine), `+ nova aba ${ENGINE[engine].label}`)
-      b.onclick = () => openSession({ harness: h.name, sessionId: s.id, engine })
+      b.onclick = () => openSession({ workspace: h.name, sessionId: s.id, engine })
       return b
     }))
 
@@ -404,12 +404,12 @@ function showUsageDetails (engine) {
     danger: false,
     body: [
       el('p', {}, e ? `Última verificação: ${e.checkedAt ? new Date(e.checkedAt).toLocaleString('pt-BR') : '—'}` : 'Ainda não verificado.'),
-      engine === 'gemini' ? el('p', {}, 'Modelo: free. O HarnessHub não calcula uso ou cota do Gemini.') : null,
+      engine === 'gemini' ? el('p', {}, 'Modelo: free. O CLI Context Hub não calcula uso ou cota do Gemini.') : null,
       e?.message ? el('p', {}, e.message) : null,
       e?.staleSince ? el('p', {}, `Os números exibidos são antigos, obtidos em ${new Date(e.staleSince).toLocaleString('pt-BR')}. A última tentativa não os atualizou.`) : null,
       e?.error ? el('p', {}, el('strong', {}, `Erro: ${e.error}`)) : null,
-      e?.source === 'statusline' ? el('p', {}, 'Fonte: statusline do Claude. Os números são atualizados a cada resposta nas abas do Claude abertas pelo harness-hub.') : null,
-      engine === 'claude' && e?.status === 'waiting' ? el('p', {}, 'Ainda sem dados: abra uma aba do Claude pelo harness-hub e envie uma mensagem.') : null,
+      e?.source === 'statusline' ? el('p', {}, 'Fonte: statusline do Claude. Os números são atualizados a cada resposta nas abas do Claude abertas pelo cli-context-hub.') : null,
+      engine === 'claude' && e?.status === 'waiting' ? el('p', {}, 'Ainda sem dados: abra uma aba do Claude pelo cli-context-hub e envie uma mensagem.') : null,
       e?.status === 'unparsed' && !e.message ? el('p', {}, 'Não consegui interpretar a resposta. Abaixo está o que foi recebido.') : null,
       e?.raw ? el('pre', { className: 'raw' }, e.raw) : null
     ].filter(Boolean)
@@ -421,7 +421,7 @@ function showUsageDetails (engine) {
   }).catch(error => toast(cleanError(error)))
 }
 
-// ---------- explorador de arquivos (pasta files/ do harness) ----------
+// ---------- explorador de arquivos (pasta files/ do workspace) ----------
 const FILE_ICON = {
   md: '📝', txt: '📄', json: '🧾', yaml: '⚙', yml: '⚙', js: '🟨', ts: '🟦', jsx: '⚛', tsx: '⚛', py: '🐍', sql: '🗄',
   html: '🌐', css: '🎨', png: '🖼', jpg: '🖼', jpeg: '🖼', gif: '🖼', svg: '🖼', pdf: '📕', csv: '📊', xlsx: '📊', docx: '📘', zip: '🗜'
@@ -439,10 +439,10 @@ function folderIcon (open = false) {
 const explorer = {
   open: store.get('explorer.open', true),
   width: store.get('explorer.width', 280),
-  harness: null,              // harness mostrado
-  expanded: new Map(),        // harness -> Set de pastas abertas (rel)
-  cache: new Map(),           // `${harness}|${rel}` -> entries
-  changed: new Map(),         // `${harness}|${rel}` -> momento da mudança
+  workspace: null,              // workspace mostrado
+  expanded: new Map(),        // workspace -> Set de pastas abertas (rel)
+  cache: new Map(),           // `${workspace}|${rel}` -> entries
+  changed: new Map(),         // `${workspace}|${rel}` -> momento da mudança
   selected: null,
   creating: null,             // caixa de nome de arquivo/pasta novo: { parent, dir, value, error, sel, focus }
   renaming: null,             // caixa de renomear: { rel, type, value, error, sel, focus, busy }
@@ -458,7 +458,7 @@ function exExpanded (h) {
 function saveExpanded (h) { store.set(`explorer.expanded.${h}`, [...exExpanded(h)]) }
 
 function applyExplorerLayout () {
-  const show = explorer.open && !!explorer.harness && !$('#view-terms').classList.contains('hidden')
+  const show = explorer.open && !!explorer.workspace && !$('#view-terms').classList.contains('hidden')
   $('#explorer').classList.toggle('hidden', !show)
   $('#btn-explorer').classList.toggle('on', explorer.open)
   $('#explorer').style.setProperty('--ex-w', `${explorer.width}px`)
@@ -472,16 +472,16 @@ async function loadDir (h, rel) {
   return res.entries
 }
 
-// Mostra o explorador do harness da aba ativa
-async function showExplorerFor (harnessName) {
-  if (explorer.harness !== harnessName) {
-    explorer.harness = harnessName
+// Mostra o explorador do workspace da aba ativa
+async function showExplorerFor (workspaceName) {
+  if (explorer.workspace !== workspaceName) {
+    explorer.workspace = workspaceName
     explorer.selected = null
-    const h = state.harnesses.find(x => x.name === harnessName)
-    $('#ex-root').textContent = `${h?.title || harnessName} / contexts`
+    const h = state.workspaces.find(x => x.name === workspaceName)
+    $('#ex-root').textContent = `${h?.title || workspaceName} / contexts`
     try {
-      await loadDir(harnessName, '')
-      for (const rel of exExpanded(harnessName)) { try { await loadDir(harnessName, rel) } catch { exExpanded(harnessName).delete(rel) } }
+      await loadDir(workspaceName, '')
+      for (const rel of exExpanded(workspaceName)) { try { await loadDir(workspaceName, rel) } catch { exExpanded(workspaceName).delete(rel) } }
     } catch (e) { toast(cleanError(e)) }
   }
   renderExplorer()
@@ -489,7 +489,7 @@ async function showExplorerFor (harnessName) {
 }
 
 function renderExplorer () {
-  const h = explorer.harness
+  const h = explorer.workspace
   const tree = $('#ex-tree')
   if (!h) { tree.replaceChildren(); return }
   const now = Date.now()
@@ -563,13 +563,13 @@ function renderExplorer () {
       row.ondblclick = () => {
         if (it.type !== 'file') return
         const t = state.tabs.get(state.activeTab)
-        if (DRAW_RE.test(it.name) && t && t.harness.name === h) openDrawing(t, it.rel)
-        else if (MD_RE.test(it.name) && t && t.harness.name === h) openMarkdown(t, it.rel)
-        else if (SVG_RE.test(it.name) && t && t.harness.name === h) openSvg(t, it.rel)
-        else if (HTML_RE.test(it.name) && t && t.harness.name === h) openHtml(t, it.rel)
-        else if (MATHNOTE_RE.test(it.name) && t && t.harness.name === h) openMathnote(t, it.rel)
-        else if (PDF_RE.test(it.name) && t && t.harness.name === h) openPdf(t, it.rel)
-        else if (JSON_RE.test(it.name) && !PATCH_RE.test(it.name) && t && t.harness.name === h) openJson(t, it.rel)
+        if (DRAW_RE.test(it.name) && t && t.workspace.name === h) openDrawing(t, it.rel)
+        else if (MD_RE.test(it.name) && t && t.workspace.name === h) openMarkdown(t, it.rel)
+        else if (SVG_RE.test(it.name) && t && t.workspace.name === h) openSvg(t, it.rel)
+        else if (HTML_RE.test(it.name) && t && t.workspace.name === h) openHtml(t, it.rel)
+        else if (MATHNOTE_RE.test(it.name) && t && t.workspace.name === h) openMathnote(t, it.rel)
+        else if (PDF_RE.test(it.name) && t && t.workspace.name === h) openPdf(t, it.rel)
+        else if (JSON_RE.test(it.name) && !PATCH_RE.test(it.name) && t && t.workspace.name === h) openJson(t, it.rel)
         else window.hub.openFile(h, it.rel).catch(e => toast(cleanError(e)))
       }
       row.oncontextmenu = e => { e.preventDefault(); explorer.selected = it.rel; renderExplorer(); showContextMenu(e.clientX, e.clientY, it) }
@@ -596,7 +596,7 @@ function renderExplorer () {
 const NEW_FILE_FORMATS = [['md', 'Markdown'], ['txt', 'Texto'], ['json', 'JSON'], ['yaml', 'YAML'], ['csv', 'CSV'],
   ['js', 'JavaScript'], ['ts', 'TypeScript'], ['py', 'Python'], ['html', 'HTML'], ['css', 'CSS'], ['sql', 'SQL'], ['excalidraw', 'Desenho']]
 const NEW_FILE_TEMPLATES = {
-  excalidraw: () => JSON.stringify({ type: 'excalidraw', version: 2, source: 'harness-hub', elements: [], appState: {}, files: {} }),
+  excalidraw: () => JSON.stringify({ type: 'excalidraw', version: 2, source: 'CLI Context Hub', elements: [], appState: {}, files: {} }),
   json: () => '{\n}\n',
   html: name => `<!doctype html>\n<html lang="pt-BR">\n  <head>\n    <meta charset="utf-8">\n    <title>${name}</title>\n  </head>\n  <body>\n\n  </body>\n</html>\n`
 }
@@ -607,7 +607,7 @@ const extOf = name => /\.([^./\\]+)$/.exec(name)?.[1].toLowerCase() || ''
 const nameParts = value => value.trim().split(/[\\/]+/).filter(Boolean)
 
 function findExplorerItem (rel) {
-  const h = explorer.harness
+  const h = explorer.workspace
   return [...explorer.cache.entries()].filter(([k]) => k.startsWith(h + '|')).flatMap(([, v]) => v).find(x => x.rel === rel)
 }
 
@@ -619,7 +619,7 @@ function targetFolder () {
 }
 
 async function startCreate (parent, dir) {
-  const h = explorer.harness
+  const h = explorer.workspace
   if (!h) return
   const parts = parent ? parent.split('/') : []
   for (let i = 1; i <= parts.length; i++) {
@@ -648,7 +648,7 @@ function validateNewName ({ value, parent }) {
     if (RESERVED_NAME.test(p)) return `"${p}" é um nome reservado do Windows.`
   }
   const first = parts[0].toLowerCase()
-  const clash = (explorer.cache.get(exKey(explorer.harness, parent)) || []).find(s => s.name.toLowerCase() === first)
+  const clash = (explorer.cache.get(exKey(explorer.workspace, parent)) || []).find(s => s.name.toLowerCase() === first)
   if (clash && (parts.length === 1 || clash.type === 'file')) return `Já existe "${clash.name}" nesta pasta.`
   return ''
 }
@@ -656,7 +656,7 @@ function validateNewName ({ value, parent }) {
 async function commitCreate () {
   const c = explorer.creating
   if (!c || c.busy) return
-  const h = explorer.harness
+  const h = explorer.workspace
   c.error = validateNewName(c)
   if (c.error) { renderExplorer(); return }
   const parts = nameParts(c.value)
@@ -686,7 +686,7 @@ async function commitCreate () {
   renderExplorer()
   if (c.dir) return
   const t = state.tabs.get(state.activeTab)
-  const here = t && t.harness.name === h
+  const here = t && t.workspace.name === h
   if (here && DRAW_RE.test(name)) openDrawing(t, rel, { activate: true })
   else if (here && MD_RE.test(name)) openMarkdown(t, rel, { mode: 'edit' }).then(d => d && d.mode !== 'edit' && setMdMode(t, d, 'edit'))
   else if (here && SVG_RE.test(name)) openSvg(t, rel, { activate: true })
@@ -767,7 +767,7 @@ function createRows (depth) {
 const viewerRe = kind => ({ draw: DRAW_RE, md: MD_RE, svg: SVG_RE, html: HTML_RE, mathnote: MATHNOTE_RE, json: JSON_RE })[kind]
 
 function startRename (it) {
-  if (!explorer.harness) return
+  if (!explorer.workspace) return
   explorer.creating = null
   explorer.selected = it.rel
   // arquivo: seleciona só o nome, sem a extensão
@@ -790,7 +790,7 @@ function validateRename ({ rel, value }) {
   if (name === '.' || name === '..') return 'Não use "." ou ".." como nome.'
   if (BAD_NAME.test(name)) return 'Não use < > : " | ? * nem termine o nome com ponto ou espaço.'
   if (RESERVED_NAME.test(name)) return `"${name}" é um nome reservado do Windows.`
-  const clash = (explorer.cache.get(exKey(explorer.harness, parentOf(rel))) || [])
+  const clash = (explorer.cache.get(exKey(explorer.workspace, parentOf(rel))) || [])
     .find(s => s.rel !== rel && s.name.toLowerCase() === name.toLowerCase())
   if (clash) return `Já existe "${clash.name}" nesta pasta.`
   return ''
@@ -799,7 +799,7 @@ function validateRename ({ rel, value }) {
 async function commitRename () {
   const r = explorer.renaming
   if (!r || r.busy) return
-  const h = explorer.harness
+  const h = explorer.workspace
   const oldName = r.rel.split('/').pop()
   const newName = r.value.trim()
   if (newName === oldName) { cancelRename(); return }
@@ -808,7 +808,7 @@ async function commitRename () {
   r.busy = true
   // subabas abertas no item (ou dentro da pasta): grava o pendente antes de mudar o caminho
   const inside = rel => rel === r.rel || rel.startsWith(r.rel + '/')
-  const affected = [...state.tabs.values()].filter(t => t.harness.name === h)
+  const affected = [...state.tabs.values()].filter(t => t.workspace.name === h)
     .flatMap(t => t.drawings.filter(d => !d.readOnly && inside(d.rel)).map(d => ({ t, d })))
   for (const { t, d } of affected) {
     if (!d.saveTimer && (d.text === undefined || d.text === d.lastWritten)) continue
@@ -902,7 +902,7 @@ function renameRows (it, depth, isOpen) {
 }
 
 async function onExplorerClick (it) {
-  const h = explorer.harness
+  const h = explorer.workspace
   explorer.selected = it.rel
   if (it.type === 'dir') {
     const set = exExpanded(h)
@@ -918,7 +918,7 @@ async function onExplorerClick (it) {
 
 // it = null: clique na área vazia da árvore (raiz da files/)
 function showContextMenu (x, y, it) {
-  const h = explorer.harness
+  const h = explorer.workspace
   const menu = $('#ctx-menu')
   const item = (label, fn) => { const b = el('button', { role: 'menuitem' }, label); b.onclick = e => { e.stopPropagation(); hideContextMenu(); fn() }; return b }
   const activeTab = state.tabs.get(state.activeTab)
@@ -933,14 +933,14 @@ function showContextMenu (x, y, it) {
   } else menu.replaceChildren(...[
     ...createItems,
     el('div', { className: 'ctx-sep' }),
-    it.type === 'file' && DRAW_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Abrir no desenho', () => openDrawing(activeTab, it.rel)) : null,
-    it.type === 'file' && MD_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Abrir no leitor', () => openMarkdown(activeTab, it.rel)) : null,
-    it.type === 'file' && MD_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Editar arquivo', () => openMarkdown(activeTab, it.rel, { mode: 'edit' }).then(d => d && d.mode !== 'edit' && setMdMode(activeTab, d, 'edit'))) : null,
-    it.type === 'file' && SVG_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Abrir no visualizador', () => openSvg(activeTab, it.rel)) : null,
-    it.type === 'file' && HTML_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Abrir no visualizador', () => openHtml(activeTab, it.rel)) : null,
-    it.type === 'file' && MATHNOTE_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Abrir no MathNote', () => openMathnote(activeTab, it.rel)) : null,
-    it.type === 'file' && PDF_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Abrir no visualizador', () => openPdf(activeTab, it.rel)) : null,
-    it.type === 'file' && JSON_RE.test(it.name) && !PATCH_RE.test(it.name) && activeTab && activeTab.harness.name === h ? item('Abrir no visualizador', () => openJson(activeTab, it.rel)) : null,
+    it.type === 'file' && DRAW_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Abrir no desenho', () => openDrawing(activeTab, it.rel)) : null,
+    it.type === 'file' && MD_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Abrir no leitor', () => openMarkdown(activeTab, it.rel)) : null,
+    it.type === 'file' && MD_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Editar arquivo', () => openMarkdown(activeTab, it.rel, { mode: 'edit' }).then(d => d && d.mode !== 'edit' && setMdMode(activeTab, d, 'edit'))) : null,
+    it.type === 'file' && SVG_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Abrir no visualizador', () => openSvg(activeTab, it.rel)) : null,
+    it.type === 'file' && HTML_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Abrir no visualizador', () => openHtml(activeTab, it.rel)) : null,
+    it.type === 'file' && MATHNOTE_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Abrir no MathNote', () => openMathnote(activeTab, it.rel)) : null,
+    it.type === 'file' && PDF_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Abrir no visualizador', () => openPdf(activeTab, it.rel)) : null,
+    it.type === 'file' && JSON_RE.test(it.name) && !PATCH_RE.test(it.name) && activeTab && activeTab.workspace.name === h ? item('Abrir no visualizador', () => openJson(activeTab, it.rel)) : null,
     it.type === 'file' ? item('Abrir no programa padrão', () => window.hub.openFile(h, it.rel).catch(e => toast(cleanError(e)))) : null,
     item('Mostrar no Explorer', () => window.hub.revealFile(h, it.rel)),
     item('Copiar caminho', async () => { await navigator.clipboard.writeText(await window.hub.filePath(h, it.rel)); toast('Caminho copiado', 'ok') }),
@@ -955,7 +955,7 @@ function showContextMenu (x, y, it) {
   menu.style.top = `${Math.min(y, window.innerHeight - r.height - 8)}px`
 }
 async function deleteExplorerItem (it) {
-  const h = explorer.harness
+  const h = explorer.workspace
   const isDir = it.type === 'dir'
   const ok = await confirmDialog({
     title: isDir ? 'Excluir pasta' : 'Excluir arquivo',
@@ -987,7 +987,7 @@ async function deleteExplorerItem (it) {
 // Delete exclui e F2 renomeia o item selecionado no explorador
 $('#ex-tree').tabIndex = 0
 $('#ex-tree').addEventListener('keydown', e => {
-  if ((e.key !== 'Delete' && e.key !== 'F2') || !explorer.selected || !explorer.harness) return
+  if ((e.key !== 'Delete' && e.key !== 'F2') || !explorer.selected || !explorer.workspace) return
   const it = findExplorerItem(explorer.selected)
   if (!it) return
   e.preventDefault()
@@ -1012,7 +1012,7 @@ window.addEventListener('blur', hideContextMenu)
 
 // ---------- drag-and-drop: mover itens e importar arquivos externos ----------
 async function handleExplorerDrop (e, destFolder) {
-  const h = explorer.harness
+  const h = explorer.workspace
   if (!h) return
   // arquivos internos (do próprio explorador)
   const srcRel = e.dataTransfer.getData('text/x-explorer-rel')
@@ -1074,7 +1074,7 @@ $('#ex-tree').addEventListener('drop', e => {
 })
 
 // Mudanças vindas do disco: recarrega só as pastas afetadas que estão abertas
-window.hub.onFilesChanged(async ({ harness: h, changes }) => {
+window.hub.onFilesChanged(async ({ workspace: h, changes }) => {
   const dirs = new Set()
   for (const c of changes) {
     const parent = c.rel.includes('/') ? c.rel.slice(0, c.rel.lastIndexOf('/')) : ''
@@ -1085,8 +1085,8 @@ window.hub.onFilesChanged(async ({ harness: h, changes }) => {
       const parts = c.rel.split('/')
       for (let i = 1; i < parts.length; i++) explorer.changed.set(exKey(h, parts.slice(0, i).join('/')), Date.now())
       // pulsa a esfera correspondente no grafo 3D
-      if (h === graph3d.harness && graph3d.renderer) {
-        const nodeId = `${graph3d.harness}/contexts/${c.rel}`
+      if (h === graph3d.workspace && graph3d.renderer) {
+        const nodeId = `${graph3d.workspace}/contexts/${c.rel}`
         graph3d.renderer.pulse(nodeId)
       }
     }
@@ -1096,9 +1096,9 @@ window.hub.onFilesChanged(async ({ harness: h, changes }) => {
       try { await loadDir(h, d) } catch { explorer.cache.delete(exKey(h, d)) }
     }
   }
-  if (h === explorer.harness) renderExplorer()
+  if (h === explorer.workspace) renderExplorer()
 })
-setInterval(() => { if (explorer.harness && explorer.open) renderExplorer() }, 20000) // apaga destaques antigos
+setInterval(() => { if (explorer.workspace && explorer.open) renderExplorer() }, 20000) // apaga destaques antigos
 
 // Redimensionar arrastando a borda esquerda
 ;(function () {
@@ -1122,7 +1122,7 @@ setInterval(() => { if (explorer.harness && explorer.open) renderExplorer() }, 2
 })()
 
 // ---------- desenhos (Excalidraw) agrupados à aba ----------
-// O desenho é um arquivo .excalidraw na files/ do harness. Você desenha → o app salva no arquivo.
+// O desenho é um arquivo .excalidraw na files/ do workspace. Você desenha → o app salva no arquivo.
 // A IA escreve no arquivo (ou num .patch.json) → o app percebe e redesenha na hora.
 const DRAW_RE = /\.excalidraw$/i
 const PATCH_RE = /\.excalidraw\.patch\.json$/i
@@ -1162,13 +1162,13 @@ const jsonReady = new Promise(resolve => {
 })
 const baseName = rel => rel.split('/').pop().replace(DRAW_RE, '')
 
-// aba que deve receber um desenho novo do harness: a ativa (se for do harness) ou a usada por último
-function tabForHarness (h) {
+// aba que deve receber um desenho novo do workspace: a ativa (se for do workspace) ou a usada por último
+function tabForWorkspace (h) {
   const active = state.tabs.get(state.activeTab)
-  if (active && active.harness.name === h && !active.exited) return active
-  return [...state.tabs.values()].filter(t => t.harness.name === h && !t.exited).sort((a, b) => b.lastActive - a.lastActive)[0] || null
+  if (active && active.workspace.name === h && !active.exited) return active
+  return [...state.tabs.values()].filter(t => t.workspace.name === h && !t.exited).sort((a, b) => b.lastActive - a.lastActive)[0] || null
 }
-const tabWithDrawing = (h, rel) => [...state.tabs.values()].find(t => t.harness.name === h && t.drawings.some(d => d.rel === rel))
+const tabWithDrawing = (h, rel) => [...state.tabs.values()].find(t => t.workspace.name === h && t.drawings.some(d => d.rel === rel))
 
 async function readWithRetry (h, rel) {
   // a IA pode estar no meio da escrita: tenta algumas vezes antes de desistir
@@ -1187,8 +1187,8 @@ async function openDrawing (t, rel, { activate = true, persist = true, flash = f
   if (d) { if (activate) setTabView(t, rel); if (flash) flashSub(t, rel); return d }
 
   let text
-  try { text = await readWithRetry(t.harness.name, rel) } catch (e) { toast(e.message); return null }
-  if (text == null) text = JSON.stringify({ type: 'excalidraw', version: 2, source: 'harness-hub', elements: [], appState: {}, files: {} })
+  try { text = await readWithRetry(t.workspace.name, rel) } catch (e) { toast(e.message); return null }
+  if (text == null) text = JSON.stringify({ type: 'excalidraw', version: 2, source: 'CLI Context Hub', elements: [], appState: {}, files: {} })
 
   // 1º monta o editor vazio (isso registra as fontes do Excalidraw); 2º converte e mede os textos
   d = { kind: 'draw', rel, name: baseName(rel), host: el('div', { className: 'draw-host hidden' }), handle: null, lastWritten: text, saveTimer: null, previewTimer: null, fitted: false }
@@ -1245,7 +1245,7 @@ async function closeDrawing (t, rel, { discard = false } = {}) {
 }
 
 function persistDrawings (t) {
-  window.hub.setTabDrawings(t.harness.name, t.session.id, t.tab.id, t.drawings.map(d => d.rel)).catch(() => {})
+  window.hub.setTabDrawings(t.workspace.name, t.session.id, t.tab.id, t.drawings.map(d => d.rel)).catch(() => {})
 }
 
 // ---- salvar (o que você desenha vai para o arquivo) ----
@@ -1264,7 +1264,7 @@ function flushSave (t, d) {
 async function saveMathnoteNow (t, d) {
   if (d.readOnly || d.text === d.lastWritten) return
   d.lastWritten = d.text
-  try { await window.hub.writeFile(t.harness.name, d.rel, d.text) } catch (e) { toast(cleanError(e)) }
+  try { await window.hub.writeFile(t.workspace.name, d.rel, d.text) } catch (e) { toast(cleanError(e)) }
 }
 async function saveNow (t, d) {
   d.saveTimer = null
@@ -1273,11 +1273,11 @@ async function saveNow (t, d) {
   const json = window.HubDraw.serialize(scene.elements, scene.appState, scene.files)
   if (json === d.lastWritten) return
   d.lastWritten = json
-  try { await window.hub.writeFile(t.harness.name, d.rel, json) } catch (e) { toast(cleanError(e)) }
+  try { await window.hub.writeFile(t.workspace.name, d.rel, json) } catch (e) { toast(cleanError(e)) }
   schedulePreview(t, d)
 }
 
-// ---- prévia para a IA ler: .hub/desenhos/<rel>.png e .md ----
+// ---- prévia para a IA ler: .cch/desenhos/<rel>.png e .md ----
 function schedulePreview (t, d) {
   clearTimeout(d.previewTimer)
   d.previewTimer = setTimeout(async () => {
@@ -1285,7 +1285,7 @@ function schedulePreview (t, d) {
     if (!scene) return
     try {
       const png = await window.HubDraw.exportPng(scene.elements, scene.appState, scene.files)
-      await window.hub.drawPreview(t.harness.name, d.rel, png, window.HubDraw.summarize(scene.elements))
+      await window.hub.drawPreview(t.workspace.name, d.rel, png, window.HubDraw.summarize(scene.elements))
     } catch (e) { console.error('prévia', e) }
   }, 1500)
 }
@@ -1295,7 +1295,7 @@ async function onDrawingChanged (h, rel, autoOpen = false) {
   const t = tabWithDrawing(h, rel)
   if (!t) {
     if (!autoOpen) return
-    const target = tabForHarness(h)
+    const target = tabForWorkspace(h)
     if (target) {
       await openDrawing(target, rel, { activate: true, flash: true })
       toast(`Desenho aberto: ${baseName(rel)}`, 'ok')
@@ -1326,7 +1326,7 @@ async function onPatchFile (h, patchRel) {
   if (patchText == null) return
   let t = tabWithDrawing(h, rel)
   if (!t) {
-    const target = tabForHarness(h)
+    const target = tabForWorkspace(h)
     if (!target) return
     await openDrawing(target, rel, { activate: true })
     t = target
@@ -1345,7 +1345,7 @@ async function onPatchFile (h, patchRel) {
   } catch (e) { toast(`Patch ${patchRel}: ${e.message}`) }
 }
 
-window.hub.onFilesChanged(async ({ harness: h, changes }) => {
+window.hub.onFilesChanged(async ({ workspace: h, changes }) => {
   // Abre sozinho só um arquivo novo que chegou sozinho (ex.: desenho que a IA acabou de criar).
   // Alterações em arquivos existentes, git pull, sincronização do OneDrive e pastas movidas
   // mexem em arquivos já existentes ou em vários de uma vez: atualizam o que está aberto, sem abrir abas.
@@ -1514,7 +1514,7 @@ async function openMarkdown (t, rel, { activate = true, persist = true, mode = '
   await mdReady
   let d = t.drawings.find(x => x.rel === rel)
   if (d) { if (activate) setTabView(t, rel); return d }
-  const text = preloadText ?? await window.hub.readFile(t.harness.name, rel)
+  const text = preloadText ?? await window.hub.readFile(t.workspace.name, rel)
   if (text == null) { toast(`Arquivo não encontrado: ${rel}`); return null }
 
   const view = el('div', { className: 'md-view' })
@@ -1537,7 +1537,7 @@ async function openMarkdown (t, rel, { activate = true, persist = true, mode = '
 }
 
 async function renderMd (t, d) {
-  const root = await window.hub.filePath(t.harness.name, '')
+  const root = await window.hub.filePath(t.workspace.name, '')
   const dir = d.rel.includes('/') ? d.rel.slice(0, d.rel.lastIndexOf('/') + 1) : ''
   const toFileUrl = rel => 'file:///' + encodeURI(`${root}/${rel}`.replace(/\\/g, '/').replace(/^\/+/, ''))
   const scroll = d.viewEl.scrollTop
@@ -1579,7 +1579,7 @@ async function saveMd (t, d) {
   d.saveTimer = null
   if (d.readOnly || d.text === d.lastWritten) return
   d.lastWritten = d.text
-  try { await window.hub.writeFile(t.harness.name, d.rel, d.text) } catch (e) { toast(cleanError(e)) }
+  try { await window.hub.writeFile(t.workspace.name, d.rel, d.text) } catch (e) { toast(cleanError(e)) }
 }
 
 // a IA (ou outro programa) alterou um .md aberto
@@ -1623,7 +1623,7 @@ function onMdLinkClick (t, d, e) {
   else if (MATHNOTE_RE.test(target)) openMathnote(t, target)
   else if (PDF_RE.test(target)) openPdf(t, target)
   else if (JSON_RE.test(target) && !PATCH_RE.test(target)) openJson(t, target)
-  else window.hub.openFile(t.harness.name, target).catch(err => toast(cleanError(err)))
+  else window.hub.openFile(t.workspace.name, target).catch(err => toast(cleanError(err)))
 }
 
 // ---------- arquivos SVG: subaba de visualização com pan/zoom ----------
@@ -1631,7 +1631,7 @@ async function openSvg (t, rel, { activate = true, persist = true, text: preload
   await svgReady
   let d = t.drawings.find(x => x.rel === rel)
   if (d) { if (activate) setTabView(t, rel); return d }
-  const text = preloadText ?? await window.hub.readFile(t.harness.name, rel)
+  const text = preloadText ?? await window.hub.readFile(t.workspace.name, rel)
   if (text == null) { toast(`Arquivo não encontrado: ${rel}`); return null }
 
   const view = el('div', { className: 'svg-view' })
@@ -1654,7 +1654,7 @@ async function onSvgChanged (h, rel, autoOpen = false) {
   const t = tabWithDrawing(h, rel)
   if (!t) {
     if (!autoOpen) return
-    const target = tabForHarness(h)
+    const target = tabForWorkspace(h)
     if (target) {
       await openSvg(target, rel, { activate: true })
       toast(`SVG aberto: ${rel.split('/').pop()}`, 'ok')
@@ -1676,11 +1676,11 @@ async function openHtml (t, rel, { activate = true, persist = true, text: preloa
   await htmlReady
   let d = t.drawings.find(x => x.rel === rel)
   if (d) { if (activate) setTabView(t, rel); return d }
-  const text = preloadText ?? await window.hub.readFile(t.harness.name, rel)
+  const text = preloadText ?? await window.hub.readFile(t.workspace.name, rel)
   if (text == null) { toast(`Arquivo não encontrado: ${rel}`); return null }
 
   const view = el('div', { className: 'html-view' })
-  const baseUrl = 'file:///' + encodeURI((await window.hub.filePath(t.harness.name, rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/') + 1) : '')).replace(/\\/g, '/'))
+  const baseUrl = 'file:///' + encodeURI((await window.hub.filePath(t.workspace.name, rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/') + 1) : '')).replace(/\\/g, '/'))
   d = {
     kind: 'html', rel, name: rel.split('/').pop().replace(HTML_RE, ''),
     host: el('div', { className: 'draw-host html-host hidden' }, view),
@@ -1699,7 +1699,7 @@ async function onHtmlChanged (h, rel, autoOpen = false) {
   const t = tabWithDrawing(h, rel)
   if (!t) {
     if (!autoOpen) return
-    const target = tabForHarness(h)
+    const target = tabForWorkspace(h)
     if (target) {
       await openHtml(target, rel, { activate: true })
       toast(`HTML aberto: ${rel.split('/').pop()}`, 'ok')
@@ -1721,7 +1721,7 @@ async function openMathnote (t, rel, { activate = true, persist = true, text: pr
   await mathnoteReady
   let d = t.drawings.find(x => x.rel === rel)
   if (d) { if (activate) setTabView(t, rel); return d }
-  const text = preloadText ?? await window.hub.readFile(t.harness.name, rel)
+  const text = preloadText ?? await window.hub.readFile(t.workspace.name, rel)
   if (text == null) { toast(`Arquivo não encontrado: ${rel}`); return null }
 
   const view = el('div', { className: 'mathnote-view' })
@@ -1763,7 +1763,7 @@ async function onMathnoteChanged (h, rel, autoOpen = false) {
   const t = tabWithDrawing(h, rel)
   if (!t) {
     if (!autoOpen) return
-    const target = tabForHarness(h)
+    const target = tabForWorkspace(h)
     if (target) {
       await openMathnote(target, rel, { activate: true })
       toast(`MathNote aberto: ${rel.split('/').pop()}`, 'ok')
@@ -1786,7 +1786,7 @@ async function openPdf (t, rel, { activate = true, persist = true } = {}) {
   let d = t.drawings.find(x => x.rel === rel)
   if (d) { if (activate) setTabView(t, rel); return d }
 
-  const absPath = await window.hub.filePath(t.harness.name, rel)
+  const absPath = await window.hub.filePath(t.workspace.name, rel)
   if (!absPath) { toast(`Arquivo não encontrado: ${rel}`); return null }
   const fileUrl = 'file:///' + encodeURI(absPath.replace(/\\/g, '/'))
 
@@ -1809,7 +1809,7 @@ async function onPdfChanged (h, rel, autoOpen = false) {
   const t = tabWithDrawing(h, rel)
   if (!t) {
     if (!autoOpen) return
-    const target = tabForHarness(h)
+    const target = tabForWorkspace(h)
     if (target) {
       await openPdf(target, rel, { activate: true })
       toast(`PDF aberto: ${rel.split('/').pop()}`, 'ok')
@@ -1831,7 +1831,7 @@ async function openJson (t, rel, { activate = true, persist = true } = {}) {
   await jsonReady
   let d = t.drawings.find(x => x.rel === rel)
   if (d) { if (activate) setTabView(t, rel); return d }
-  const text = await window.hub.readFile(t.harness.name, rel)
+  const text = await window.hub.readFile(t.workspace.name, rel)
   if (text == null) { toast(`Arquivo não encontrado: ${rel}`); return null }
 
   const view = el('div', { className: 'json-view' })
@@ -1853,7 +1853,7 @@ async function onJsonChanged (h, rel, autoOpen = false) {
   const t = tabWithDrawing(h, rel)
   if (!t) {
     if (!autoOpen) return
-    const target = tabForHarness(h)
+    const target = tabForWorkspace(h)
     if (target) {
       await openJson(target, rel, { activate: true })
       toast(`JSON aberto: ${rel.split('/').pop()}`, 'ok')
@@ -1873,14 +1873,14 @@ async function onJsonChanged (h, rel, autoOpen = false) {
 // Cria um desenho vazio na files/ (pasta indicada) e abre na aba ativa
 async function newDrawing (folderRel = '') {
   const t = state.tabs.get(state.activeTab)
-  if (!t || t.harness.name !== explorer.harness) { toast('Abra uma aba deste harness para desenhar.'); return }
-  const entries = explorer.cache.get(exKey(explorer.harness, folderRel)) || (await loadDir(explorer.harness, folderRel))
+  if (!t || t.workspace.name !== explorer.workspace) { toast('Abra uma aba deste workspace para desenhar.'); return }
+  const entries = explorer.cache.get(exKey(explorer.workspace, folderRel)) || (await loadDir(explorer.workspace, folderRel))
   const names = new Set(entries.map(e => e.name))
   let n = 1
   let name = 'desenho.excalidraw'
   while (names.has(name)) name = `desenho-${++n}.excalidraw`
   const rel = folderRel ? `${folderRel}/${name}` : name
-  await window.hub.writeFile(t.harness.name, rel, JSON.stringify({ type: 'excalidraw', version: 2, source: 'harness-hub', elements: [], appState: {}, files: {} }))
+  await window.hub.writeFile(t.workspace.name, rel, JSON.stringify({ type: 'excalidraw', version: 2, source: 'CLI Context Hub', elements: [], appState: {}, files: {} }))
   // o vigia também detecta; abrir direto evita esperar
   await openDrawing(t, rel, { activate: true })
 }
@@ -1915,14 +1915,14 @@ function confirmDialog ({ title, body, confirmLabel = 'Confirmar', cancelLabel =
 
 // ---------- excluir sessão ----------
 async function deleteSession (h, s) {
-  const openCount = [...state.tabs.values()].filter(t => t.session.id === s.id && t.harness.name === h.name && !t.exited).length
+  const openCount = [...state.tabs.values()].filter(t => t.session.id === s.id && t.workspace.name === h.name && !t.exited).length
   const ok = await confirmDialog({
     title: 'Excluir sessão',
     confirmLabel: 'Excluir',
     body: [
       el('p', {}, 'Tem certeza que deseja excluir a sessão:'),
       el('span', { className: 'modal-name' }, s.title, el('small', {}, `${h.title} · ${s.id}`)),
-      el('p', {}, 'Serão apagados o handoff, o log e as mensagens desta sessão. Essa ação não pode ser desfeita. Os arquivos do harness (pasta contexts) não são afetados.'),
+      el('p', {}, 'Serão apagados o handoff, o log e as mensagens desta sessão. Essa ação não pode ser desfeita. Os arquivos do workspace (pasta contexts) não são afetados.'),
       openCount ? el('p', {}, el('strong', {}, `${openCount} aba${openCount > 1 ? 's abertas' : ' aberta'} desta sessão ${openCount > 1 ? 'serão fechadas' : 'será fechada'}.`)) : null,
       el('p', {}, 'O histórico guardado pelo próprio Claude/Copilot não é apagado.')
     ].filter(Boolean)
@@ -1937,7 +1937,7 @@ async function deleteSession (h, s) {
   }
   // fecha na tela as abas que pertenciam à sessão
   for (const t of [...state.tabs.values()]) {
-    if (t.session.id === s.id && t.harness.name === h.name) closeTab(t.termId)
+    if (t.session.id === s.id && t.workspace.name === h.name) closeTab(t.termId)
   }
   toast(`Sessão "${s.title}" excluída`, 'ok')
   if (state.selected === h.name) { await renderLauncher(); if (!state.activeTab) showView('launcher') }
@@ -2005,7 +2005,7 @@ function renderBrowserPanel (mode) {
   if (mode === 'home') {
     const active = currentBrowserTab()
     const welcome = el('div', { className: 'browser-home' },
-      el('strong', {}, 'Navegador HarnessHub'),
+      el('strong', {}, 'Navegador CLI Context Hub'),
       el('span', {}, active?.url || 'Pesquise ou digite um endereço acima.'))
     panel.append(welcome)
   } else if (!items.length) {
@@ -2036,7 +2036,7 @@ function renderBrowserPanel (mode) {
 const recordingName = () => `gravacao-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`
 
 async function stopAutomationRecordingUi (t) {
-  try { toast(`Receita salva em contexts/${await window.hub.stopAutomationRecording(t.harness.name, recordingName())}`, 'ok') } catch (e) { toast(cleanError(e)) }
+  try { toast(`Receita salva em contexts/${await window.hub.stopAutomationRecording(t.workspace.name, recordingName())}`, 'ok') } catch (e) { toast(cleanError(e)) }
 }
 
 async function fillAutomationsPanel (panel, list) {
@@ -2056,7 +2056,7 @@ async function fillAutomationsPanel (panel, list) {
   panel.querySelector('.browser-panel-head').append(el('div', { className: 'browser-panel-actions' }, recBtn, reload))
   list.append(el('div', { className: 'browser-panel-empty' }, 'Carregando...'))
   let recipes = []
-  try { recipes = await window.hub.listAutomations(t.harness.name) } catch (e) { toast(cleanError(e)) }
+  try { recipes = await window.hub.listAutomations(t.workspace.name) } catch (e) { toast(cleanError(e)) }
   list.replaceChildren()
   if (!recipes.length) {
     list.append(el('div', { className: 'browser-panel-empty' }, 'Nenhuma receita em contexts/navegador/automacoes/. Grave uma, ou peça ao agente para criar (skill automacoes-navegador).'))
@@ -2069,7 +2069,7 @@ async function fillAutomationsPanel (panel, list) {
     run.onclick = async () => {
       closeBrowserPanel()
       try {
-        const out = await window.hub.runAutomation(t.harness.name, r.rel)
+        const out = await window.hub.runAutomation(t.workspace.name, r.rel)
         toast(out.saved.length ? `Concluída. ${out.saved.length} arquivo(s) salvo(s) em contexts/` : 'Automação concluída', 'ok')
       } catch (e) { toast(cleanError(e)) }
     }
@@ -2267,7 +2267,7 @@ async function saveBrowserPageToContexts (t) {
   if (info.selection) md += `## Trecho selecionado\n\n${info.selection}\n\n`
   md += `## Conteúdo da página\n\n${info.text}\n`
   try {
-    await window.hub.createEntry(t.harness.name, rel, false, md)
+    await window.hub.createEntry(t.workspace.name, rel, false, md)
     toast(`Salvo em contexts/${rel}`, 'ok')
   } catch (e) { toast(cleanError(e)) }
 }
@@ -2396,7 +2396,7 @@ async function openSession (req) {
   sidebar.autoCollapse()
 }
 
-function createTab ({ termId, harness, session, tab }) {
+function createTab ({ termId, workspace, session, tab }) {
   // Cada aba é um "grupo": subbarra (Terminal + desenhos) e, embaixo, terminal e desenho lado a lado
   const container = el('div', { className: 'term tab-group' })
   const subbar = el('div', { className: 'subbar hidden' })
@@ -2430,7 +2430,7 @@ function createTab ({ termId, harness, session, tab }) {
 
   const t = {
     termId, term, fit, container, exited: false,
-    harness, session, tab,
+    workspace, session, tab,
     label: `${session.title} · ${ENGINE[tab.engine]?.label || tab.engine}`,
     subbar, termPane, drawPane, splitter,
     drawings: [],          // { rel, name, host, handle, lastWritten, saveTimer, previewTimer }
@@ -2468,7 +2468,7 @@ function renderTabs () {
     close.onclick = e => { e.stopPropagation(); closeTab(t.termId) }
     const b = el('button', {
       className: 'tab' + (t.termId === state.activeTab ? ' active' : '') + (t.exited ? ' exited' : ''),
-      title: `${t.harness.title} · ${t.session.title} · ${t.tab.id} (${t.tab.engine})` +
+      title: `${t.workspace.title} · ${t.session.title} · ${t.tab.id} (${t.tab.engine})` +
         `${t.session.topics?.length ? `\ntópicos: ${t.session.topics.join(', ')}` : ''}` +
         `\nsession_id ${t.tab.session_id}`
     },
@@ -2490,7 +2490,7 @@ function activateTab (termId) {
   renderTabs()
   showView('terms')
   const t = state.tabs.get(termId)
-  showExplorerFor(t.harness.name)
+  showExplorerFor(t.workspace.name)
   initGraph3D()
 
   // browser: mostrar se a aba ativa tem browser visível, senão esconder
@@ -2592,13 +2592,13 @@ async function renderSettings () {
   settingsDraft.saved = settings
   renderSettingsForm()
 
-  // harnesses que ignoram esta configuração por terem padrão próprio
-  await refreshHarnesses()
+  // workspaces que ignoram esta configuração por terem padrão próprio
+  await refreshWorkspaces()
   renderUsage()
-  const own = state.harnesses.filter(h => h.engines.defaultFrom === 'harness')
+  const own = state.workspaces.filter(h => h.engines.defaultFrom === 'workspace')
   $('#settings-overrides').textContent = own.length
-    ? `Com motor próprio no harness.yaml (não seguem esta opção): ${own.map(h => `${h.title} → ${ENGINE[h.engines.default].label}`).join(', ')}`
-    : 'Todos os harnesses seguem esta opção.'
+    ? `Com motor próprio no workspace.yaml (não seguem esta opção): ${own.map(h => `${h.title} → ${ENGINE[h.engines.default].label}`).join(', ')}`
+    : 'Todos os workspaces seguem esta opção.'
 }
 
 function renderSettingsForm () {
@@ -2712,12 +2712,12 @@ function toggleExplorer () { explorer.open = !explorer.open; store.set('explorer
 $('#btn-explorer').onclick = toggleExplorer
 document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'e' && !e.shiftKey && !e.altKey) { e.preventDefault(); toggleExplorer() } })
 $('#ex-close').onclick = () => { explorer.open = false; store.set('explorer.open', false); applyExplorerLayout() }
-$('#ex-refresh').onclick = async () => { const h = explorer.harness; if (!h) return; explorer.harness = null; for (const k of [...explorer.cache.keys()]) if (k.startsWith(h + '|')) explorer.cache.delete(k); await showExplorerFor(h) }
+$('#ex-refresh').onclick = async () => { const h = explorer.workspace; if (!h) return; explorer.workspace = null; for (const k of [...explorer.cache.keys()]) if (k.startsWith(h + '|')) explorer.cache.delete(k); await showExplorerFor(h) }
 $('#ex-new-drawing').onclick = () => newDrawing(targetFolder())
 $('#ex-new-file').onclick = () => startCreate(targetFolder(), false)
 $('#ex-new-folder').onclick = () => startCreate(targetFolder(), true)
-$('#ex-collapse').onclick = () => { if (!explorer.harness) return; exExpanded(explorer.harness).clear(); saveExpanded(explorer.harness); renderExplorer() }
-$('#ex-root').onclick = () => { if (explorer.harness) window.hub.revealFile(explorer.harness, '') }
+$('#ex-collapse').onclick = () => { if (!explorer.workspace) return; exExpanded(explorer.workspace).clear(); saveExpanded(explorer.workspace); renderExplorer() }
+$('#ex-root').onclick = () => { if (explorer.workspace) window.hub.revealFile(explorer.workspace, '') }
 $('#btn-usage-refresh').onclick = () => window.hub.refreshUsage()
 window.hub.onUsage(st => renderUsage(st))
 window.hub.getUsage().then(renderUsage).catch(() => {})
@@ -2725,30 +2725,30 @@ setInterval(() => renderUsage(), 30000) // atualiza o "há X min"
 $('#toast-close').onclick = () => $('#toast').classList.add('hidden')
 $('#btn-toggle').onclick = () => sidebar.toggle()
 $('#btn-pin').onclick = () => sidebar.togglePin()
-$('#btn-new-harness').onclick = () => createHarnessDialog()
+$('#btn-new-workspace').onclick = () => createWorkspaceDialog()
 $('#btn-browse-workdir').onclick = async () => {
   const folder = await window.hub.browseFolder()
   if (folder) $('#new-workdir').value = folder
 }
-$('#btn-browse-harness-workdir').onclick = async () => {
+$('#btn-browse-workspace-workdir').onclick = async () => {
   const folder = await window.hub.browseFolder()
   if (!folder || !state.selected) return
   try {
-    const updated = await window.hub.setHarnessWorkdir(state.selected, folder)
-    const idx = state.harnesses.findIndex(x => x.name === state.selected)
-    if (idx >= 0) state.harnesses[idx] = updated
-    $('#harness-workdir').value = updated.workdir
+    const updated = await window.hub.setWorkspaceWorkdir(state.selected, folder)
+    const idx = state.workspaces.findIndex(x => x.name === state.selected)
+    if (idx >= 0) state.workspaces[idx] = updated
+    $('#workspace-workdir').value = updated.workdir
     toast('Diretorio padrão atualizado')
   } catch (e) { toast(cleanError(e)) }
 }
-$('#btn-clear-harness-workdir').onclick = async () => {
+$('#btn-clear-workspace-workdir').onclick = async () => {
   if (!state.selected) return
   try {
-    const updated = await window.hub.setHarnessWorkdir(state.selected, null)
-    const idx = state.harnesses.findIndex(x => x.name === state.selected)
-    if (idx >= 0) state.harnesses[idx] = updated
-    $('#harness-workdir').value = updated.workdir || updated.path
-    toast('Diretorio padrão restaurado para pasta do harness')
+    const updated = await window.hub.setWorkspaceWorkdir(state.selected, null)
+    const idx = state.workspaces.findIndex(x => x.name === state.selected)
+    if (idx >= 0) state.workspaces[idx] = updated
+    $('#workspace-workdir').value = updated.workdir || updated.path
+    toast('Diretorio padrão restaurado para pasta do workspace')
   } catch (e) { toast(cleanError(e)) }
 }
 // toolbar: miniapps (movido do sidebar)
@@ -2922,39 +2922,39 @@ $('#btn-new-tab').onclick = async () => {
 }
 $('#new-title').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    const h = state.harnesses.find(x => x.name === state.selected)
-    if (h?.engines.default) openSession({ harness: h.name, newSession: { title: e.target.value, workdir: $('#new-workdir').value.trim() || null }, engine: h.engines.default })
+    const h = state.workspaces.find(x => x.name === state.selected)
+    if (h?.engines.default) openSession({ workspace: h.name, newSession: { title: e.target.value, workdir: $('#new-workdir').value.trim() || null }, engine: h.engines.default })
   }
 })
 
 // ---------- painel 3D (dentro do explorador de arquivos) ----------
-const graph3d = { renderer: null, harness: null, expanded: false }
+const graph3d = { renderer: null, workspace: null, expanded: false }
 
 async function initGraph3D () {
-  const harness = state.tabs.get(state.activeTab)?.harness.name
-  if (!harness) { setGraph3DExpanded(false); return }
-  if (graph3d.harness === harness) return
-  graph3d.harness = harness
+  const workspace = state.tabs.get(state.activeTab)?.workspace.name
+  if (!workspace) { setGraph3DExpanded(false); return }
+  if (graph3d.workspace === workspace) return
+  graph3d.workspace = workspace
   try {
-    const structure = await window.hub.getHarnessStructure(harness)
-    if (graph3d.harness !== harness) return
+    const structure = await window.hub.getWorkspaceStructure(workspace)
+    if (graph3d.workspace !== workspace) return
     graph3d.renderer?.dispose()
-    graph3d.renderer = new Graph3DRenderer($('#graph3d-container'), new HarnessGraph(structure), {
+    graph3d.renderer = new Graph3DRenderer($('#graph3d-container'), new WorkspaceGraph(structure), {
       onPick: revealFromGraph,
       onContextMenu: showGraph3DColorMenu
     })
     // restaurar cores persistidas
-    const saved = store.get(`graph3d.colors.${harness}`, {})
+    const saved = store.get(`graph3d.colors.${workspace}`, {})
     for (const [id, hex] of Object.entries(saved)) graph3d.renderer.setFolderColor(id, hex)
     graph3d.renderer.setExpanded(graph3d.expanded)
     $('#graph3d-panel').classList.remove('hidden')
-    // reload topics for this harness
+    // reload topics for this workspace
     topics.loaded = []; topics.active = new Set(); topics.visible = false
     $('#graph3d-topics').classList.add('hidden')
     $('#graph3d-topics-btn').classList.remove('active')
     $('#graph3d-topics').replaceChildren()
   } catch (e) {
-    graph3d.harness = null
+    graph3d.workspace = null
     console.error('Painel 3D erro:', e)
   }
 }
@@ -2973,7 +2973,7 @@ const GRAPH_COLORS = [
 
 function showGraph3DColorMenu (e, node) {
   const menu = $('#ctx-menu')
-  const h = graph3d.harness
+  const h = graph3d.workspace
   const colorRow = el('div', { className: 'ctx-colors' })
   for (const c of GRAPH_COLORS) {
     const swatch = el('button', { className: 'ctx-swatch', title: c.label, style: `background:${c.hex}` })
@@ -3002,11 +3002,11 @@ function showGraph3DColorMenu (e, node) {
   menu.style.top = `${Math.min(e.clientY, window.innerHeight - r.height - 8)}px`
 }
 
-function applyGraph3DColor (harness, node, hex) {
+function applyGraph3DColor (workspace, node, hex) {
   if (!graph3d.renderer) return
   graph3d.renderer.setFolderColor(node.id, hex)
   // persistir
-  const key = `graph3d.colors.${harness}`
+  const key = `graph3d.colors.${workspace}`
   const saved = store.get(key, {})
   // aplicar a todos os filhos recursivamente
   const walk = n => {
@@ -3029,8 +3029,8 @@ $('#graph3d-expand').addEventListener('click', () => setGraph3DExpanded(!graph3d
 
 // Clique no grafo 3D: pastas abrem/fecham no explorador; arquivos abrem no viewer adequado.
 async function revealFromGraph (node, open) {
-  const h = explorer.harness
-  if (!h || h !== graph3d.harness) return
+  const h = explorer.workspace
+  if (!h || h !== graph3d.workspace) return
   let root = node
   while (root.parent) root = root.parent
   const prefix = `${root.id}/contexts`
@@ -3040,18 +3040,18 @@ async function revealFromGraph (node, open) {
   if (!inContexts && node.isFile) {
     if (graph3d.expanded) setGraph3DExpanded(false)
     const t = state.tabs.get(state.activeTab)
-    if (!t || t.harness.name !== h) return
-    // rel a partir da raiz do harness: remove "harness-name/" do início do id
-    const harnessRel = node.id.slice(root.id.length + 1)
-    const name = harnessRel.split('/').pop()
-    const text = await window.hub.readHarnessFile(h, harnessRel)
-    if (text == null) { toast(`Arquivo não encontrado: ${harnessRel}`); return }
-    // usar o harnessRel como identificador da subaba (prefixado para não colidir com contexts/)
-    const viewRel = `~${harnessRel}`
+    if (!t || t.workspace.name !== h) return
+    // rel a partir da raiz do workspace: remove "workspace-name/" do início do id
+    const workspaceRel = node.id.slice(root.id.length + 1)
+    const name = workspaceRel.split('/').pop()
+    const text = await window.hub.readWorkspaceFile(h, workspaceRel)
+    if (text == null) { toast(`Arquivo não encontrado: ${workspaceRel}`); return }
+    // usar o workspaceRel como identificador da subaba (prefixado para não colidir com contexts/)
+    const viewRel = `~${workspaceRel}`
     if (MD_RE.test(name)) await openMarkdown(t, viewRel, { text, readOnly: true })
     else if (SVG_RE.test(name)) await openSvg(t, viewRel, { text, readOnly: true })
     else if (HTML_RE.test(name)) await openHtml(t, viewRel, { text, readOnly: true })
-    else window.hub.openFile(h, harnessRel).catch(e => toast(cleanError(e)))
+    else window.hub.openFile(h, workspaceRel).catch(e => toast(cleanError(e)))
     return
   }
   // Nó fora de contexts/ que não é arquivo (pasta): toggle no grafo, sem ação no explorador
@@ -3071,7 +3071,7 @@ async function revealFromGraph (node, open) {
     if (node.isFile) {
       if (graph3d.expanded) setGraph3DExpanded(false)
       const t = state.tabs.get(state.activeTab)
-      if (t && t.harness.name === h) {
+      if (t && t.workspace.name === h) {
         const name = rel.split('/').pop()
         if (DRAW_RE.test(name)) openDrawing(t, rel)
         else if (MD_RE.test(name)) openMarkdown(t, rel)
@@ -3094,15 +3094,15 @@ async function revealFromGraph (node, open) {
   else $('#ex-tree').scrollTop = 0
 }
 
-// Relê as pastas do harness e atualiza o grafo sem perder ramos abertos nem a posição das esferas.
+// Relê as pastas do workspace e atualiza o grafo sem perder ramos abertos nem a posição das esferas.
 async function refreshGraph3D () {
-  const harness = graph3d.harness
-  if (!harness || !graph3d.renderer) return initGraph3D()
+  const workspace = graph3d.workspace
+  if (!workspace || !graph3d.renderer) return initGraph3D()
   const btn = $('#graph3d-reload')
   btn.classList.add('spinning')
   try {
-    const structure = await window.hub.getHarnessStructure(harness)
-    if (graph3d.harness === harness && graph3d.renderer) graph3d.renderer.setGraph(new HarnessGraph(structure))
+    const structure = await window.hub.getWorkspaceStructure(workspace)
+    if (graph3d.workspace === workspace && graph3d.renderer) graph3d.renderer.setGraph(new WorkspaceGraph(structure))
   } catch (e) {
     toast(`Não foi possível recarregar a estrutura: ${cleanError(e)}`)
   } finally {
@@ -3133,8 +3133,8 @@ $('#graph3d-center').addEventListener('click', () => {
 
 // Mudanças na files/ (criar, excluir, renomear) atualizam o grafo sozinhas, agrupadas.
 let graph3dRefreshTimer
-window.hub.onFilesChanged(({ harness }) => {
-  if (harness !== graph3d.harness) return
+window.hub.onFilesChanged(({ workspace }) => {
+  if (workspace !== graph3d.workspace) return
   clearTimeout(graph3dRefreshTimer)
   graph3dRefreshTimer = setTimeout(() => { refreshGraph3D(); if (topics.visible) loadTopics() }, 600)
 })
@@ -3149,15 +3149,15 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && graph3d.ex
 const topics = { loaded: [], active: new Set(), visible: false }
 
 async function loadTopics () {
-  const harness = graph3d.harness
-  if (!harness) return
+  const workspace = graph3d.workspace
+  if (!workspace) return
   try {
-    const result = await window.hub.listFiles(harness, '_topics')
+    const result = await window.hub.listFiles(workspace, '_topics')
     const entries = result?.entries || result || []
     const ymls = entries.filter(e => e.name.endsWith('.topic.yml'))
     const loaded = []
     for (const entry of ymls) {
-      const text = await window.hub.readHarnessFile(harness, `contexts/_topics/${entry.name}`)
+      const text = await window.hub.readWorkspaceFile(workspace, `contexts/_topics/${entry.name}`)
       if (!text) continue
       const topic = parseTopicYml(text, entry.name)
       if (topic) loaded.push(topic)
@@ -3190,12 +3190,12 @@ function parseTopicYml (text, filename) {
 }
 
 function resolveTopicNodeIds (topic) {
-  const harness = graph3d.harness
-  if (!harness) return new Set()
+  const workspace = graph3d.workspace
+  if (!workspace) return new Set()
   const ids = new Set()
   for (const f of topic.files) {
     const rel = f.replace(/^(\.\.\/)+/g, '')
-    ids.add(`${harness}/contexts/${rel}`)
+    ids.add(`${workspace}/contexts/${rel}`)
   }
   return ids
 }
@@ -3260,23 +3260,23 @@ window.addEventListener('resize', () => { fitActive(); updateBrowserBounds() })
 ;(async function init () {
   sidebar.apply()
   try {
-    const [{ root, harnesses, settingsWarnings }, miniapps] = await Promise.all([
-      window.hub.listHarnesses(),
+    const [{ root, workspaces, settingsWarnings }, miniapps] = await Promise.all([
+      window.hub.listWorkspaces(),
       window.hub.listMiniapps(),
       refreshEngines()
     ])
-    state.harnesses = harnesses
+    state.workspaces = workspaces
     state.miniapps = miniapps
     $('#miniapp-count').textContent = `${miniapps.length} instalado${miniapps.length === 1 ? '' : 's'}`
     if (settingsWarnings?.length) toast('Configurações: ' + settingsWarnings.join(' · '))
-    $('#harness-root').textContent = root
-    $('#harness-root').title = root
+    $('#workspace-root').textContent = root
+    $('#workspace-root').title = root
   } catch (e) {
     toast(e.message)
   }
-  renderHarnessList()
+  renderWorkspaceList()
   renderUsage()
-  const last = store.get('harness.selected', null)
-  if (last && state.harnesses.some(h => h.name === last)) selectHarness(last)
+  const last = store.get('workspace.selected', null)
+  if (last && state.workspaces.some(h => h.name === last)) selectWorkspace(last)
   else showView('empty')
 })()

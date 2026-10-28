@@ -1,4 +1,4 @@
-const DB_NAME = 'harnesshub-miniapps'
+const DB_NAME = 'cch-miniapps'
 const DB_VERSION = 2
 const STORE_TASKS = 'tasks'
 const STORE_RESEARCH = 'research'

@@ -1,6 +1,6 @@
-# harness-hub (app)
+# cli-context-hub (app)
 
-Aplicação Electron do harness-hub: escolha um harness, inicie ou retome uma sessão e trabalhe
+Aplicação Electron do cli-context-hub: escolha um workspace, inicie ou retome uma sessão e trabalhe
 com Claude Code CLI, Copilot CLI ou Gemini CLI num terminal integrado.
 
 ## Rodar
@@ -26,14 +26,14 @@ Testes de integração dos motores (sem acessar provedores): `npm test`.
 ```
 src/
 ├── main/                 ← processo principal (acesso ao SO)
-│   ├── main.js           ← janela + IPC (harness:list, session:list, session:open, terminal:*)
+│   ├── main.js           ← janela + IPC (workspace:list, session:list, session:open, terminal:*)
 │   ├── settings.js       ← lê ../settings.yaml (configurações do programa)
 │   ├── engines.js        ← cadastro único de CLIs, metadados e argumentos
-│   ├── harnesses.js      ← lê ../harnesses/*/harness.yaml
+│   ├── workspaces.js      ← lê ../workspaces/*/workspace.yaml
 │   ├── sessions.js       ← cria/lista sessões, abas, log (fila de escrita única)
 │   ├── terminals.js      ← PTY (node-pty) + preflight e execução dos CLIs
-│   ├── sync.js           ← tradutor: copia skills/agents/commands do harness para .claude/ e .github/
-│   ├── files.js          ← explorador: lista e vigia a pasta files/ do harness
+│   ├── sync.js           ← tradutor: copia skills/agents/commands do workspace para .claude/ e .github/
+│   ├── files.js          ← explorador: lista e vigia a pasta files/ do workspace
 │   ├── usage.js          ← mini-dashboard: statusline do Claude + /usage do Copilot
 ├── statusline/
 │   └── claude-statusline.js ← statusline do Claude que grava os limites do plano
@@ -50,12 +50,12 @@ src/
 - Retomar aba: `claude --resume <uuid>` / `copilot --resume <uuid>`, na mesma pasta (`workdir`).
 - Gemini usa `--session-id <uuid>` e `--resume <uuid>`; nunca retoma "latest".
   O prompt usa `--prompt-interactive` para manter o terminal interativo.
-- Para `workdir` fora do harness, o app inclui sua raiz via `--add-dir` (Claude/Copilot)
-  ou `--include-directories` (Gemini). Dentro do harness não é necessário incluir diretórios extras.
+- Para `workdir` fora do workspace, o app inclui sua raiz via `--add-dir` (Claude/Copilot)
+  ou `--include-directories` (Gemini). Dentro do workspace não é necessário incluir diretórios extras.
 
 ## Configurações do programa
 
-Ficam em `harness-hub/settings.yaml` (criado automaticamente na primeira execução e relido a cada uso):
+Ficam em `cli-context-hub/settings.yaml` (criado automaticamente na primeira execução e relido a cada uso):
 
 ```yaml
 engine:
@@ -65,7 +65,7 @@ terminal:
   shell: null          # null = CMD no Windows
 ```
 
-Ordem de prioridade do motor padrão: `harness.yaml` (`engines.default`) > `settings.yaml` > primeiro motor suportado.
+Ordem de prioridade do motor padrão: `workspace.yaml` (`engines.default`) > `settings.yaml` > primeiro motor suportado.
 Somente motores ativos e suportados entram nessa escolha; nenhuma opção compatível resulta em `null`.
 
 Em **Configurações → CLIs ativos**, marque/desmarque os provedores e clique em Salvar.
@@ -75,25 +75,25 @@ novas sessões e retomadas ficam bloqueadas até reativar. É obrigatório mante
 menos um CLI ativo e selecionar um padrão ativo. A mudança vale sem reiniciar.
 
 Configurações antigas sem `engine.enabled` habilitam todos os cadastrados. No
-`harness.yaml`, `engines.supported: null` herda o cadastro; uma lista explícita
-restringe compatibilidade. O template e os harnesses existentes usam `null`.
-Opções `gemini.model` e `gemini.args` permitem escolher modelo/argumentos por harness.
+`workspace.yaml`, `engines.supported: null` herda o cadastro; uma lista explícita
+restringe compatibilidade. O template e os workspaces existentes usam `null`.
+Opções `gemini.model` e `gemini.args` permitem escolher modelo/argumentos por workspace.
 
 ## Explorador de arquivos (direita)
 
-Com uma aba aberta, a barra da direita mostra a pasta `files/` do harness daquela aba, com subpastas
+Com uma aba aberta, a barra da direita mostra a pasta `files/` do workspace daquela aba, com subpastas
 carregadas sob demanda e atualização ao vivo (o que muda fica verde por 1 minuto). Clique duplo abre o
 arquivo no programa padrão; botão direito: abrir, mostrar no Explorer, copiar caminho. O botão 🗂 na
 barra de abas mostra/oculta; a borda esquerda redimensiona.
 
-Se o `harness.yaml` não define `workdir` (vazio, `null` ou `~`), o terminal abre na **raiz do harness**,
+Se o `workspace.yaml` não define `workdir` (vazio, `null` ou `~`), o terminal abre na **raiz do workspace**,
 onde os CLIs encontram `AGENTS.md`, `CLAUDE.md` e as skills. A skill `onde-salvar-arquivos` (com a regra
 no `AGENTS.md`) faz os modelos salvarem em `files/` e perguntarem a pasta quando você não disser.
 
-## Tradutor do harness (src/main/sync.js)
+## Tradutor do workspace (src/main/sync.js)
 
-Antes de abrir cada aba, o app copia o formato neutro do harness para as pastas que os CLIs leem,
-**uma única vez por harness, na raiz dele** (nunca dentro das sessões):
+Antes de abrir cada aba, o app copia o formato neutro do workspace para as pastas que os CLIs leem,
+**uma única vez por workspace, na raiz dele** (nunca dentro das sessões):
 
 | Origem | Destino | Quem lê |
 |---|---|---|
@@ -104,13 +104,13 @@ Antes de abrir cada aba, o app copia o formato neutro do harness para as pastas 
 | `AGENTS.md` | `GEMINI.md` com `@AGENTS.md` | Gemini |
 | `skills/<x>/` | `.gemini/skills/<x>/` | Gemini |
 
-O **Codex** usa `AGENTS.md` diretamente e é iniciado pelo HarnessHub com
+O **Codex** usa `AGENTS.md` diretamente e é iniciado pelo CLI Context Hub com
 `codex start --no-daemon`. Esses argumentos são acrescentados automaticamente em toda nova sessão, junto com `CODEX_CA_CERTIFICATE` apontando para o bundle de certificados do Git. O executável deve estar instalado no PATH. O Codex não entra no
 mini-dashboard de uso enquanto não houver uma fonte de métricas própria.
 
 O **Ollama** abre só o executável `ollama` na pasta da sessão (`workdir`), sem ID de sessão, prompt,
 modelo, variáveis nem sincronização de skills: o menu do próprio Ollama escolhe o modelo/integração.
-`ollama.args` no `harness.yaml` vira os argumentos (ex.: `[run, qwen3.5:9b]`). "Retomar" a aba apenas
+`ollama.args` no `workspace.yaml` vira os argumentos (ex.: `[run, qwen3.5:9b]`). "Retomar" a aba apenas
 abre o `ollama` de novo, sem histórico. Sem integração de uso no mini-dashboard.
 
 Ao abrir ou retomar uma aba, a sincronização prepara somente os recursos do CLI
@@ -121,20 +121,20 @@ informadas e impedem a abertura, sem iniciar com configuração incompleta.
 
 As pastas geradas são recriadas a cada aba: edite só as originais. Itens com nome iniciado por `_`
 (ex.: `_exemplo-skill`) são ignorados.
-Para Gemini, skills geradas são identificadas com `.harness-hub-generated`;
+Para Gemini, skills geradas são identificadas com `.cch-generated`;
 skills manuais conflitantes produzem erro em vez de serem sobrescritas. Um
 `GEMINI.md` manual é preservado. Agentes, comandos e MCP ainda não são traduzidos
 para formatos Gemini: essa integração cobre instruções, skills e sessões.
 
 ## Desenhos (Excalidraw) agrupados à aba
 
-Cada aba de terminal pode ter **subabas de desenho**: arquivos `.excalidraw` da `files/` do harness.
+Cada aba de terminal pode ter **subabas de desenho**: arquivos `.excalidraw` da `files/` do workspace.
 
 - **A IA cria/edita** um `.excalidraw` (ou um `<nome>.excalidraw.patch.json`) → o app abre a subaba
-  sozinho na aba ativa daquele harness e redesenha na hora. Formatos aceitos: completo, esqueleto
+  sozinho na aba ativa daquele workspace e redesenha na hora. Formatos aceitos: completo, esqueleto
   (`convertToExcalidrawElements`) e Mermaid (`"mermaid": "flowchart ..."`). Veja a skill `desenhar-excalidraw`.
 - **Você desenha** → o app salva no arquivo (0,7 s depois de parar) e mantém para a IA
-  `.hub/desenhos/<rel>.png` (imagem) e `.hub/desenhos/<rel>.md` (resumo com ids, textos e conexões).
+  `.cch/desenhos/<rel>.png` (imagem) e `.cch/desenhos/<rel>.md` (resumo com ids, textos e conexões).
 - Terminal e desenho ficam lado a lado (arraste a divisória) ou **⤢ Maximizar**.
 - No explorador: ✏ cria um desenho; clique duplo em `.excalidraw` abre na subaba; botão direito
   numa pasta → "Novo desenho aqui".
@@ -156,11 +156,11 @@ subaba 📝 no mesmo esquema dos desenhos. Um único botão alterna **✎ Editar
 
 - **Claude:** as abas do Claude abertas pelo app usam a statusline `src/statusline/claude-statusline.js`
   (via `--settings`). Depois de cada resposta o Claude entrega os limites do plano para ela, que grava
-  `harness-hub/.usage/claude-statusline.json`; o painel atualiza na hora. Nenhuma consulta extra é feita
+  `cli-context-hub/.usage/claude-statusline.json`; o painel atualiza na hora. Nenhuma consulta extra é feita
   (o `/usage` do Claude consulta um servidor da Anthropic que pode estar bloqueado em redes corporativas).
 - **Copilot:** a cada `usage.intervalMinutes` (padrão 5) o app abre o CLI num terminal invisível
-  (`harness-hub/.usage/probe`), digita `/usage` e lê a tela. A última tela fica em `.usage/copilot-last.txt`.
-- **Gemini:** o painel mostra a tag **free** definida no `harness.yaml` e não
+  (`cli-context-hub/.usage/probe`), digita `/usage` e lê a tela. A última tela fica em `.usage/copilot-last.txt`.
+- **Gemini:** o painel mostra a tag **free** definida no `workspace.yaml` e não
   calcula uso ou cota. Isso evita transformar uma sessão de sondagem vazia em
   feedback de erro ou em percentual enganoso.
   A tela original fica em `.usage/gemini-last.txt` para diagnóstico.
@@ -181,7 +181,7 @@ Limites da Gemini API são por projeto, não por chave:
 
 ## Adicionar outro CLI
 
-Use a skill `adicionar-modelo` da pasta principal `skills/` do harness (incluída
+Use a skill `adicionar-modelo` da pasta principal `skills/` do workspace (incluída
 também no template). O cadastro fica em `src/main/engines.js`; a interface recebe
 os metadados por `engines:list`. Confirme flags e capacidades oficiais, adapte
 preflight/sincronização quando necessário e acrescente testes. Variantes internas
@@ -196,12 +196,12 @@ Contrato Gemini consultado:
 
 | Variável | Padrão | Para quê |
 |---|---|---|
-| `HARNESS_HUB_HOME` | `../harnesses` | Onde ficam os harnesses |
-| `HARNESS_HUB_SETTINGS` | `../settings.yaml` | Arquivo de configurações |
-| `HARNESS_HUB_SHELL` | `terminal.shell` | Sobrepõe o shell das configurações |
+| `CCH_HOME` | `../workspaces` | Onde ficam os workspaces |
+| `CCH_SETTINGS` | `../settings.yaml` | Arquivo de configurações |
+| `CCH_SHELL` | `terminal.shell` | Sobrepõe o shell das configurações |
 
-Dentro de cada terminal o app define `HARNESS_HUB_HARNESS`, `HARNESS_HUB_SESSION_DIR`,
-`HARNESS_HUB_TAB` e `HARNESS_HUB_ENGINE` (base para os hooks de log que virão).
+Dentro de cada terminal o app define `CCH_WORKSPACE`, `CCH_SESSION_DIR`,
+`CCH_TAB` e `CCH_ENGINE` (base para os hooks de log que virão).
 
 ## Atalhos
 
